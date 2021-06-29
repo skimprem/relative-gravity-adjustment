@@ -5,7 +5,7 @@ Supports loading of CG5, CG6 data and using WLS Inversion to complete gravity ad
 * Useful to find solutions for the free-air gradient
 * Useful to discover gravity differences between benchmarks in a gravity network
 
-Open `invert.py` to view examples. The provided example data is from a free-air gradient measurement using both CG5 and CG6 instruments.
+Open `invert.py` to view examples. The provided example data is from a free-air gradient measurement using both CG5 and CG6 instruments. This program does not do tidal or ocean loading corrections and these effects need to be removed a priori (e.g., [Pygtide](https://github.com/hydrogeoscience/pygtide)), or using the internal CG5 (Longman, 1959) and CG6 routines.
 
 ## Class DataLoader
 
