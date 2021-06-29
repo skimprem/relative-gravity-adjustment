@@ -67,6 +67,17 @@ class DataWrapper():
     return mdates.date2num(self.df["Date_Time"].iloc[0])
 
 
+  @property
+  def end(self):
+
+    """
+    def DataWrapper.start
+    Returns the start time of the data set
+    """
+
+    return mdates.date2num(self.df["Date_Time"].iloc[-1])
+
+
   def setupGravityDesign(self, stations, changes):
 
     """
@@ -116,17 +127,17 @@ class DataWrapper():
     # Get the inversion results
     lsq = N @ G.T @ W @ y
     # Reduced chi-squared (degrees of freedom = number of observations - number of model)
-    dof = y.size - np.size(G, 1)
+    dof = y.size - np.size(G, 1) - 1
     # These are the residuals from the model
     residuals = y - (G @ lsq)
     # Calculate chi squared
-    chi = residuals.T @ W @ residuals
+    rchi = (residuals.T @ W @ residuals) / dof
     # Variance of unit weight multiplied by N
-    res = (chi / dof) * N
+    res = rchi * N
     # Extract the standard deviations
     std = np.sqrt(np.diag(res))
 
-    return lsq, std, residuals, chi
+    return lsq, std, residuals, rchi
 
 
   def invert(self, degree, anchor=None):
@@ -182,6 +193,8 @@ class InversionResult():
 
   def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations, chi):
 
+    self.start = parent.start
+    self.end = parent.end
     self.df = parent.df
     self.filename = parent.filename
     self.x = x
@@ -212,7 +225,7 @@ class InversionResult():
       "# CG5, CG6 Relative Gravity Adjustment Export",
       "# Version: %s" % __VERSION__,
       "# Created: %s" % datetime.utcnow(),
-      "# Chi Squared: %s" % self.chi,
+      "# Reduced Chi Squared: %s" % self.chi,
       "# Anchor: %s" % self.anchor,
       "# Polynomial Degree: %s" % self.degree,
       "# Linear Drift Rate: %s" % self.getDriftRate(),
@@ -348,6 +361,8 @@ class DataLoader():
       return self.readCG5Dat(filepath)
     elif ver == "CG6":
       return self.readCG6Dat(filepath)
+    elif ver == "USGS":
+      return self.readUSGS(filepath)
     else:
       raise ValueError("Input version must be CG5 or CG6")
 
@@ -361,9 +376,21 @@ class DataLoader():
     """
 
     df = pd.read_csv(filepath, comment="/", delimiter="\t", parse_dates=[[1, 2]])
-  
+
     return DataWrapper(df, filepath)
   
+
+  @classmethod
+  def readUSGS(self, filepath):
+
+    df = pd.read_csv(filepath, delimiter="\t", parse_dates=[[15, 12]])
+    header = ["Date_Time", "Station", "Latitude", "Longitude", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "Temp", "Tide", "duration", "rej", "Dec. Time+Date", "Terrain", "Accepted"]
+
+    df.columns = header
+    df["StdErr"] = df["StdErr"] / np.sqrt((df["duration"] - df["rej"]))
+
+    return DataWrapper(df, filepath)
+
 
   @classmethod
   def readCG5Dat(self, filepath):
@@ -379,7 +406,8 @@ class DataLoader():
     # Make some modifications to the header
     df = pd.read_csv(filepath, comment="/", delimiter="\s+", parse_dates=[[14, 11]])
     df.columns = header
-    # Calculate the stderr (CG5 has stdev)
+
+    # Calculate the stderr (CG5 has stdev).. It samples at 6Hz but CG6 calculates the standard error like this
     df["StdErr"] = df["StdErr"] / np.sqrt(df["duration"] - df["rej"])
   
     return DataWrapper(df, filepath)

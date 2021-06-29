@@ -1,13 +1,18 @@
 from lib import DataLoader
 import sys
+
 if __name__ == "__main__":
 
   """
   Examples
   """
 
-  data = DataLoader.load("CG6", "CG6.dat")
+  data = DataLoader.load("USGS", "578_2017-04-21.csv")
+  result = data.invert(1)
+  result.plot(removeDrift=False)
 
+  sys.exit(0)
+  data = DataLoader.load("CG6", "CG6.dat")
   result = data.invert(1)
   result.plot(removeDrift=False)
   result.plotResiduals()
