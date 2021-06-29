@@ -1,4 +1,5 @@
 from lib import DataLoader
+import sys
 
 if __name__ == "__main__":
 
@@ -9,6 +10,8 @@ if __name__ == "__main__":
   data = DataLoader.load("CG6", "CG6.dat")
 
   result = data.invert(1)
+  result.save("test.dat")
+  sys.exit(0)
   result.plot(removeDrift=False)
   result.plotResiduals()
 
@@ -16,3 +19,4 @@ if __name__ == "__main__":
   result = data.invert(2)
   result.plot(removeDrift=True)
   result.plotResiduals()
+  result.save("test.dat")

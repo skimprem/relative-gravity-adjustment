@@ -188,6 +188,25 @@ class InversionResult():
     self.stations = stations
 
 
+  def save(self, filepath):
+
+    """
+    property InversionResult.save
+    Saves inversion results to a file
+    """
+
+    # Create the compiled array to be stored
+    data = np.array([self.changes, np.round(self.mdg), np.round(self.stddg, 2)]).T
+
+    # Save to file
+    np.savetxt(filepath,
+               data,
+               delimiter="\t",
+               comments="",
+               fmt="%s",
+               header="Benchmark\tGravity\tSD")
+
+
   @property
   def differences(self):
 
@@ -222,7 +241,12 @@ class InversionResult():
 
   def plotGroup(self, benchmark, label, color):
 
-    # Plot the anhor
+    """
+    def InversionResult.plotGroup
+    Plots a single group
+    """
+
+    # Get indices of the right group
     idx = self.stations == benchmark 
     xb = self.df["Date_Time"][idx]
     yb = self.y[idx]
@@ -231,8 +255,17 @@ class InversionResult():
     plt.scatter(xb, yb, label=label, edgecolor="black", linewidth=1, zorder=3, color=color)
     plt.errorbar(xb, yb, yerr=sb, uplims=True, lolims=True, zorder=2, color="black", linewidth=1, fmt="o", capsize=2)
 
+
   def getDriftRate(self):
+
+    """
+    def InversionResult.getDriftRate
+    Returns and formats the drift rate from the recovered polynomial
+    """
+
+    # Disregard the intercept
     return "%sµGal/day" % int(round(86400 * self.drift[1]))
+
 
   def plot(self, removeDrift=False):
 
