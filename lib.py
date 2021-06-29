@@ -83,20 +83,26 @@ class DataWrapper():
     return np.array(matrix_stations.T == matrix_changes, dtype=np.int)
 
 
-  def setupPolynomialDesign(self, degree, x, y):
+  def setupPolynomialDesign(self, degree, x):
 
     """
     def setupPolynomialDesign.setupPolynomialDesign
-    Sets up the polynomial design matrix (up to 3rd order)
+    Sets up the polynomial design matrix
     """
 
-    # Support until third poly: can trivially extend to higher orders
+    if degree == 0:
+      raise ValueError("Polynomial degree cannot be 0.")
+
+    matrix = [np.ones(x.size), x]
+
     if degree == 1:
-      return np.array([x, np.ones(y.size)])
-    elif degree == 2:
-      return np.array([np.square(x), x, np.ones(y.size)])
-    elif degree == 3:
-      return np.array([np.power(x, 3), np.square(x), x, np.ones(y.size)])
+      return np.flip(np.array(matrix), axis=0)
+
+    # Add higher orders
+    for deg in range(2, degree + 1):
+      matrix.append(np.power(x, deg))
+
+    return np.flip(np.array(matrix), axis=0)
 
 
   def __invert(self, G, W, y):
@@ -143,7 +149,7 @@ class DataWrapper():
     changes = unique_stations[unique_stations != anchor]
 
     # Polynomial design matrix
-    Gpoly = self.setupPolynomialDesign(degree, x, y)
+    Gpoly = self.setupPolynomialDesign(degree, x)
     # The gravity design matrix
     Gdg = self.setupGravityDesign(stations, changes)
     # Combine polynomial and gravity design matrices
@@ -208,6 +214,8 @@ class InversionResult():
       "# Created: %s" % datetime.utcnow(),
       "# Chi Squared: %s" % self.chi,
       "# Anchor: %s" % self.anchor,
+      "# Polynomial Degree: %s" % self.degree,
+      "# Linear Drift Rate: %s" % self.getDriftRate(),
       "Benchmark\tGravity\tSD"
     ])
 

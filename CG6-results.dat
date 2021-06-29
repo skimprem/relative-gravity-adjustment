@@ -1,0 +1,9 @@
+# CG5, CG6 Relative Gravity Adjustment Export
+# Version: 0.0.1
+# Created: 2021-06-29 11:49:38.357680
+# Chi Squared: 0.8396103318432288
+# Anchor: 10
+# Polynomial Degree: 1
+# Linear Drift Rate: -111µGal/day
+Benchmark	Gravity	SD
+40	-7152.0	0.38
