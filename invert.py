@@ -8,7 +8,8 @@ if __name__ == "__main__":
 
   data = DataLoader.load("CG6", "CG6.dat")
 
-  result = data.invert(1)
+  result = data.invert(1, anchor='40')
+  print(result.differences)
   result.plot()
   result.plotResiduals()
 

@@ -184,6 +184,22 @@ class InversionResult():
     self.stations = stations
 
 
+  @property
+  def differences(self):
+
+    """
+    property InversionResult.differences
+    Returns a list of tuples with the gravity differences
+    """
+
+    tuples = list()
+
+    for (x) in zip(self.changes, self.mdg, self.stddg):
+      tuples.append(x)
+
+    return {"anchor": self.anchor, "differences": tuples}
+
+
   def plotResiduals(self):
 
     """
