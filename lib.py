@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,10 +14,11 @@ class DataWrapper():
   Wraps the read CG5, CG6 data in a pandas dataframe
   """
 
-  def __init__(self, df):
+  def __init__(self, df, filepath):
 
     # Wrap the dataframe
     self.df = df
+    self.filename = os.path.basename(filepath)
 
 
   def getAnchor(self):
@@ -158,7 +161,7 @@ class DataWrapper():
     # Eliminate the gravity differences for plotting
     y -= Gdg @ mdg
 
-    return InversionResult(self.df, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations)
+    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations)
 
 
 class InversionResult():
@@ -168,9 +171,10 @@ class InversionResult():
   Container for results that come from the gravity adjustment inversion
   """
 
-  def __init__(self, df, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations):
+  def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations):
 
-    self.df = df
+    self.df = parent.df
+    self.filename = parent.filename
     self.x = x
     self.s = s
     self.y = y
@@ -216,7 +220,21 @@ class InversionResult():
     plt.show()
 
 
-  def plot(self):
+  def plotGroup(self, benchmark, label, color):
+
+    # Plot the anhor
+    idx = self.stations == benchmark 
+    xb = self.df["Date_Time"][idx]
+    yb = self.y[idx]
+    sb = self.s[idx]
+
+    plt.scatter(xb, yb, label=label, edgecolor="black", linewidth=1, zorder=3, color=color)
+    plt.errorbar(xb, yb, yerr=sb, uplims=True, lolims=True, zorder=2, color="black", linewidth=1, fmt="o", capsize=2)
+
+  def getDriftRate(self):
+    return "%sµGal/day" % int(round(86400 * self.drift[1]))
+
+  def plot(self, removeDrift=False):
 
     """
     def InversionResult.plot
@@ -225,42 +243,36 @@ class InversionResult():
 
     plt.style.use("seaborn")
 
-    # Fetch real time and plot the polynomial
+    # Fetch real time
     rx = np.array(self.df["Date_Time"])
-    plt.plot(rx, np.polyval(self.drift, self.x), color="red", linestyle="dashed")
 
-    # Plot the anhor
-    anchor = self.anchor
+    # Sample the polynomial
+    polyy = np.polyval(self.drift, self.x)
 
-    idx = self.stations == anchor
-    xb = rx[idx]
-    yb = self.y[idx]
-    sb = self.s[idx]
+    # Removing drift or not
+    if not removeDrift:
+      plt.plot(rx, polyy, color="red", linestyle="dashed", label=self.getDriftRate())
+    else:
+      self.y -= polyy
+      plt.plot(rx, np.zeros(len(rx)), color="red", linestyle="dashed", label=self.getDriftRate())
 
-    plt.scatter(xb, yb, label="%s (Anchor)" % anchor, edgecolor="black", linewidth=1, zorder=3, color="white")
-    plt.errorbar(xb, yb, yerr=sb, uplims=True, lolims=True, zorder=2, color="black", linewidth=1, fmt="o", capsize=2)
+    # Plot the anchor
+    self.plotGroup(self.anchor, "%s (Anchor)" % self.anchor, "white")
 
+    # Plot the other groups
+    # Go over all solutions for the stations
     colors = cm.rainbow(np.linspace(0, 1, len(self.changes)))
 
-    # Go over all solutions for the stations
-    for (station, dg, w, c) in zip(self.changes, self.mdg, self.stddg, colors):
-
-      # Get all data that belongs to one station
-      idx = self.stations == station
-      xb = rx[idx]
-      yb = self.y[idx]
-      sb = self.s[idx]
-
-      label = "%s (%i±%i)" % (station, np.round(dg), np.round(2 * w))
-
-      plt.scatter(xb, yb, label=label, edgecolor="black", linewidth=1, zorder=3, color=c)
-      plt.errorbar(xb, yb, yerr=sb, uplims=True, lolims=True, zorder=2, color="black", linewidth=1, fmt="o", capsize=2)
+    for (station, dg, w, color) in zip(self.changes, self.mdg, self.stddg, colors):
+      label = "%s (%s±%sµGal)" % (station, int(round(dg)), int(round(2 * w)))
+      self.plotGroup(station, label, color)
 
     plt.legend(frameon=True)
-    plt.title("Relative Gravity Adjustment: Inversion Results")
+    plt.title("Relative Gravity Adjustment: Inversion Results (%s)" % self.filename)
     plt.xlabel("Timestamp")
     plt.ylabel("Relative Gravity (μGal)")
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+
     plt.show()
 
 
@@ -296,7 +308,7 @@ class DataLoader():
 
     df = pd.read_csv(filepath, comment="/", delimiter="\t", parse_dates=[[1, 2]])
   
-    return DataWrapper(df)
+    return DataWrapper(df, filepath)
   
 
   @classmethod
@@ -316,4 +328,4 @@ class DataLoader():
     # Calculate the stderr (CG5 has stdev)
     df["StdErr"] = df["StdErr"] / np.sqrt(df["duration"] - df["rej"])
   
-    return DataWrapper(df)
+    return DataWrapper(df, filepath)
