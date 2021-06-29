@@ -25,9 +25,10 @@ Returns an InversionResult class.
 
 ## Class InversionResult
 
-Wrapper for the inverted results. Two methods exist for plotting for showing the solution and the residuals respectively. To get the actual results call the `.differences` property.
+Wrapper for the inverted results. Two methods exist for plotting for showing the solution and the residuals respectively. To get the actual results call the `.differences` property. The method `.save` can be used to write inversion results to a file.
 
     result.plot()
     result.plotResiduals()
     result.differences
+    result.save(filename)
 

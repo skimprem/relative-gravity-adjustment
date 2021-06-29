@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib.dates as mdates
 
 from matplotlib import cm
+from datetime import datetime
+
+__VERSION__ = "0.0.1"
 
 class DataWrapper():
 
@@ -117,7 +120,7 @@ class DataWrapper():
     # Extract the standard deviations
     std = np.sqrt(np.diag(res))
 
-    return lsq, std, residuals
+    return lsq, std, residuals, chi
 
 
   def invert(self, degree, anchor=None):
@@ -150,7 +153,7 @@ class DataWrapper():
     W = np.diag(np.reciprocal(np.square(s)))
 
     # Invert to model parameters & uncertainties
-    lsq, std, residuals = self.__invert(G, W, y)
+    lsq, std, residuals, chi = self.__invert(G, W, y)
 
     # These are the drift parameters
     mbeta = lsq[:degree + 1]
@@ -161,7 +164,7 @@ class DataWrapper():
     # Eliminate the gravity differences for plotting
     y -= Gdg @ mdg
 
-    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations)
+    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi)
 
 
 class InversionResult():
@@ -171,7 +174,7 @@ class InversionResult():
   Container for results that come from the gravity adjustment inversion
   """
 
-  def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations):
+  def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations, chi):
 
     self.df = parent.df
     self.filename = parent.filename
@@ -186,6 +189,7 @@ class InversionResult():
     self.residuals = residuals
     self.changes = changes
     self.stations = stations
+    self.chi = chi
 
 
   def save(self, filepath):
@@ -198,13 +202,22 @@ class InversionResult():
     # Create the compiled array to be stored
     data = np.array([self.changes, np.round(self.mdg), np.round(self.stddg, 2)]).T
 
+    header = "\n".join([
+      "# CG5, CG6 Relative Gravity Adjustment Export",
+      "# Version: %s" % __VERSION__,
+      "# Created: %s" % datetime.utcnow(),
+      "# Chi Squared: %s" % self.chi,
+      "# Anchor: %s" % self.anchor,
+      "Benchmark\tGravity\tSD"
+    ])
+
     # Save to file
     np.savetxt(filepath,
                data,
                delimiter="\t",
                comments="",
                fmt="%s",
-               header="Benchmark\tGravity\tSD")
+               header=header)
 
 
   @property
