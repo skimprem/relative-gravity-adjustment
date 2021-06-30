@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.dates as mdates
 
+from longman.longman import TideModel
+
+from scipy.interpolate import interp1d
 from matplotlib import cm
-from datetime import datetime
+from datetime import datetime, timedelta
 
 __VERSION__ = "0.0.1"
 
@@ -20,7 +23,7 @@ class DataWrapper():
   def __init__(self, df, filepath):
 
     # Wrap the dataframe
-    self.df = df
+    self.df = df[~np.isnan(df["StdErr"])]
     self.filename = os.path.basename(filepath)
 
 
@@ -140,7 +143,45 @@ class DataWrapper():
     return lsq, std, residuals, rchi
 
 
-  def invert(self, degree, anchor=None):
+  def plotTide(self):
+
+    """
+    def DataWrapper.plotTide
+    Plots tidal comparison between Longman, Instrument Default, ETERNA 3.4
+    """
+
+    plt.style.use("seaborn")
+
+    model = self.getETERNA(self.df["Date_Time"].iloc[0], self.df["Date_Time"].iloc[-1])
+    x = self.df["Date_Time"]
+    y = self.getLongman(x)
+    plt.plot(x, y, label="Longman")
+    plt.plot(x, -model(mdates.date2num(x)), label="ETERNA 3.4")
+    plt.plot(x, 1E3 * self.df["TideCorr"], label="Default")
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+    plt.legend()
+    plt.show()
+
+  def correctTide(self, y, which):
+
+    x = self.df["Date_Time"]
+
+    # Eliminate the default correction
+    y -= 1E3 * self.df["TideCorr"]
+
+    latitude = 19.40840
+    longitude = -155.28385
+    height = 1000
+
+    if which == "ETERNA":
+      return y - self.getETERNA(latitude, longitude, height, x)(mdates.date2num(x))
+    elif which == "Longman":
+      return y + self.getLongman(latitude, longitude, height, x)
+    else:
+      raise ValueError("Unknown tidal correction.")
+
+
+  def invert(self, degree, anchor=None, tide="default"):
 
     """
     def DataWrapper.invert
@@ -149,6 +190,10 @@ class DataWrapper():
 
     # Read data from file
     stations, x, y, s = self.extract()
+
+    # Correct for the tide using ETERNA
+    if tide != "default":
+      y = self.correctTide(y, tide)
 
     # First measurement is the anchor
     if anchor is None:
@@ -182,6 +227,63 @@ class DataWrapper():
     y -= Gdg @ mdg
 
     return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi)
+
+
+  def getLongman(self, latitude, longitude, height, times):
+  
+    """
+    Returns Longman tidal model
+    Taken from https://github.com/jrleeman/LongmanTide
+    """
+  
+    model = TideModel()  # Make a model object
+  
+    solution = list()
+
+    # Not vectorized
+    for time in times:
+      _, _, g = model.solve_longman(latitude, longitude, height, time)
+      solution.append(g)
+  
+    # Scale results to microGal
+    return 1E3 * np.array(solution)
+
+
+  def getETERNA(self, latitude, longitude, height, times):
+  
+    try:
+      import pygtide
+    except ImportError:
+      raise ValueError("Tide correction can only be ETERNA if pygtide is installed.")
+
+    start = times.iloc[0]
+    end = times.iloc[-1]
+
+    # create a PyGTide object
+    pt = pygtide.pygtide(msg=False)
+   
+    # Start, duration and sample rate of the model
+    duration = max(48, (end - start).days * 24)
+    samplerate = 60
+  
+    # Predict the tides using ETERNA
+    pt.predict(
+      latitude,
+      longitude,
+      height,
+      start,
+      duration,
+      samplerate,
+      tidalcompo=0
+    )
+   
+    # retrieve the results as dataframe
+    data = pt.results()
+  
+    x = mdates.date2num(data["UTC"])
+    y = 1E-1 * data["Signal [nm/s**2]"]
+
+    return interp1d(x, y, kind="cubic")
 
 
 class InversionResult():
@@ -384,7 +486,7 @@ class DataLoader():
   def readUSGS(self, filepath):
 
     df = pd.read_csv(filepath, delimiter="\t", parse_dates=[[15, 12]])
-    header = ["Date_Time", "Station", "Latitude", "Longitude", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "Temp", "Tide", "duration", "rej", "Dec. Time+Date", "Terrain", "Accepted"]
+    header = ["Date_Time", "Station", "Latitude", "Longitude", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "Temp", "TideCorr", "duration", "rej", "Dec. Time+Date", "Terrain", "Accepted"]
 
     df.columns = header
     df["StdErr"] = df["StdErr"] / np.sqrt((df["duration"] - df["rej"]))
@@ -401,10 +503,10 @@ class DataLoader():
     """
 
     # Change header to match CG6
-    header = ["Date_Time", "line", "Station", "altitude", "CorrGrav", "StdErr", "tiltx", "tilty", "temperature", "tide", "duration", "rej", "dec", "terrain"]
+    header = ["Date_Time", "line", "Station", "altitude", "CorrGrav", "StdErr", "tiltx", "tilty", "temperature", "TideCorr", "duration", "rej", "dec", "terrain"]
   
+    df = pd.read_csv(filepath, skiprows=31, delimiter="\s+", header=None, parse_dates=[[14, 11]])
     # Make some modifications to the header
-    df = pd.read_csv(filepath, comment="/", delimiter="\s+", parse_dates=[[14, 11]])
     df.columns = header
 
     # Calculate the stderr (CG5 has stdev).. It samples at 6Hz but CG6 calculates the standard error like this
