@@ -67,6 +67,7 @@ class TidalModel():
     # retrieve the results as dataframe
     data = pt.results()
 
+    # Scale to microGal
     x = mdates.date2num(data["UTC"])
     y = 1E-1 * data["Signal [nm/s**2]"]
 

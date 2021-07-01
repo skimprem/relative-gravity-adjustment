@@ -1,5 +1,5 @@
 // Example coordinates for stations (NAME, LONGITUDE, LATITUDE, HEIGHT)
-// Make sure the number of spaces remains the same
+// Make sure the number of spaces remains the same (height is ignored: can be 0.000)
 // Can be submitted to the ocean loading provider @ http://holt.oso.chalmers.se/loading/
 109YY                       -155.266275     19.4171132      0.0000
 110YY                       -155.269603     19.4110286      0.0000

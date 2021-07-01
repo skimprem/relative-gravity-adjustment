@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+
 from src.datawrapper import DataWrapper
 
 class DataLoader():
@@ -15,6 +16,11 @@ class DataLoader():
 
   @classmethod
   def load(self, ver, filepath):
+
+    """
+    def DataLoader.load
+    Reads data from a specific format
+    """
 
     if ver == "CG5":
       return self.readCG5Dat(filepath)
@@ -41,6 +47,11 @@ class DataLoader():
 
   @classmethod
   def readUSGS(self, filepath):
+
+    """
+    def DataLoader.readUSGS
+    Reads USGS gravity data
+    """
 
     df = pd.read_csv(filepath, delimiter="\t", parse_dates=[[15, 12]])
     header = ["Date_Time", "Station", "Latitude", "Longitude", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "Temp", "TideCorr", "duration", "rej", "Dec. Time+Date", "Terrain", "Accepted"]

@@ -32,6 +32,9 @@ class OceanLoadingModel():
     For gravity make sure the input is given in nm/s^2.
     """
 
+    if not os.path.exists(harmonics):
+      raise ValueError("Harmonics does not exist: %s." % harmonics)
+
     self.harmonics = harmonics
 
 

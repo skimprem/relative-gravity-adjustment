@@ -1,14 +1,9 @@
-import os
-
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.dates as mdates
 
-from src.tide import TidalModel
-from src.oceanloading import OceanLoadingModel
 from matplotlib import cm
-from datetime import datetime, timedelta
+from datetime import datetime
 
 __VERSION__ = "0.0.1"
 
@@ -43,7 +38,7 @@ class InversionResult():
 
     """
     property InversionResult.save
-    Saves inversion results to a file
+    Saves the inversion results to a file on disk
     """
 
     # Create the compiled array to be stored
@@ -57,7 +52,7 @@ class InversionResult():
       "# Anchor: %s" % self.anchor,
       "# Polynomial Degree: %s" % self.degree,
       "# Linear Drift Rate: %s" % self.getDriftRate(),
-      "Benchmark\tGravity\tSD"
+      "Benchmark\tGravity (µGal)\tSD (µGal)"
     ])
 
     # Save to file

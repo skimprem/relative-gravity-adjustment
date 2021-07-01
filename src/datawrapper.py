@@ -8,8 +8,6 @@ import matplotlib.dates as mdates
 from src.tide import TidalModel
 from src.oceanloading import OceanLoadingModel
 from src.inversionresult import InversionResult
-from matplotlib import cm
-from datetime import datetime, timedelta
 
 class DataWrapper():
 
@@ -23,6 +21,34 @@ class DataWrapper():
     # Wrap the dataframe
     self.df = df[~np.isnan(df["StdErr"])]
     self.filename = os.path.basename(filepath)
+    self.locations = None
+
+
+  def setLocations(self, filename): 
+
+    """
+    def DataWrapper.setLocation
+    Sets location required for tidal correctio
+    """
+
+    import pandas as pd
+
+    self.locations = pd.read_csv(filename, delimiter="\t")
+
+
+  def getLocation(self, benchmark):
+
+    """
+    def DataWrapper.setLocation
+    Sets location required for tidal correctio
+    """
+
+    row = self.locations[self.locations["BM"] == benchmark]
+
+    if len(row) == 0:
+      raise ValueError("No location specified for the requested benchmark (%s)." % benchmark)
+
+    return row["Latitude"].iloc[0], row["Longitude"].iloc[0], 0
 
 
   def getAnchor(self):
@@ -141,28 +167,29 @@ class DataWrapper():
     return lsq, std, residuals, rchi
 
 
-  def plotTide(self):
+  def plotTide(self, location):
 
     """
     def DataWrapper.plotTide
     Plots tidal comparison between Longman, Instrument Default, ETERNA 3.4
     """
 
+    location = (0, 0, 0)
+
     plt.style.use("seaborn")
 
-    latitude = 19.40840
-    longitude = -155.28385
-    height = 1000
-
-    model = TidalModel(latitude, longitude, height)
+    # Create a tidal model
+    tideModel = TidalModel(*location)
 
     x = self.df["Date_Time"]
 
-    loadingModel = OceanLoadingModel("harmonics/hawaii.txt").getOceanLoadingModel(self.df["Date_Time"])
+    # Create an ocean loading model
+    loadingModel = OceanLoadingModel("harmonics/HOVL-G.txt").getOceanLoadingModel(self.df["Date_Time"])
 
-    eternaModel = model.getETERNA(x)
+    eternaModel = tideModel.getETERNA(x)
 
-    y = model.getLongman(x)
+    y = tideModel.getLongman(x)
+
     plt.plot(x, y, label="Longman")
     plt.plot(x, -eternaModel(mdates.date2num(x)), label="ETERNA 3.4")
     plt.plot(x, -eternaModel(mdates.date2num(x)) + loadingModel(mdates.date2num(x)), label="ETERNA 3.4 + Ocean Loading")
@@ -171,34 +198,66 @@ class DataWrapper():
     plt.legend()
     plt.show()
 
+
   def correctLoading(self, y):
 
-    x = self.df["Date_Time"]
-    loadingModel = OceanLoadingModel("harmonics/hawaii.txt").getOceanLoadingModel(self.df["Date_Time"])
+    """
+    def DataWrapper.correctLoading
+    Corrects for the ocean loading effect
+    """
 
-    # Ocean loading needs to be ADDED because it is a CORRECTION
-    return y + loadingModel(mdates.date2num(x))
+    x = self.df["Date_Time"]
+
+    # Go over all the benchmarks
+    for benchmark in set(self.df["Station"]):
+      idx = self.df["Station"] == benchmark
+      xs = x[idx]
+      loadingModel = OceanLoadingModel("harmonics/%ss.txt" % benchmark).getOceanLoadingModel(xs)
+
+      # Ocean loading needs to be ADDED because it is a CORRECTION
+      y[idx] += loadingModel(mdates.date2num(xs))
+
+    return y
 
 
   def correctTide(self, y, which):
 
-    x = self.df["Date_Time"]
+    """
+    def DataWrapper.correctTide
+    Corrects for the solid earth tide using ETERNA or Longman 1959
+    """
 
-    # Eliminate the default correction. What is given is the CORRECTION not the EFFECT so undo the correction by subtraction
+    # Must be supplied
+    if self.locations is None:
+      raise ValueError("Cannot predict tides without a location. Use .setLocations(filename)")
+
+    x = self.df["Date_Time"]
     y -= 1E3 * self.df["TideCorr"]
 
-    latitude = 19.40840
-    longitude = -155.28385
-    height = 1000
+    for benchmark in set(self.df["Station"]):
+      
+      # Fetch the location of the benchmark itself
+      location = self.getLocation(benchmark)
 
-    model = TidalModel(latitude, longitude, height)
+      # All indices of this benchmark
+      idx = self.df["Station"] == benchmark
 
-    if which == "ETERNA":
-      return y - model.getETERNA(x)(mdates.date2num(x))
-    elif which == "Longman":
-      return y + model.getLongman(x)
-    else:
-      raise ValueError("Unknown tidal correction requested.")
+      # Get the times of this benchmark
+      xs = x[idx]
+
+      # Create a model at the particular location
+      model = TidalModel(*location)
+
+      # ETERNA gives effect: SUBTRACT
+      if which == "ETERNA":
+        y[idx] -=  model.getETERNA(xs)(mdates.date2num(xs))
+      # Longman is correction: ADD
+      elif which == "Longman":
+        y[idx] += model.getLongman(xs)
+      else:
+        raise ValueError("Unknown tidal correction requested.")
+
+    return y
 
 
   def invert(self, degree, anchor=None, tide="default", loading=False):
