@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.dates as mdates
 
 from longman.longman import TideModel
-
+from oceanloading import OceanLoadingModel
 from scipy.interpolate import interp1d
 from matplotlib import cm
 from datetime import datetime, timedelta
@@ -152,21 +152,38 @@ class DataWrapper():
 
     plt.style.use("seaborn")
 
-    model = self.getETERNA(self.df["Date_Time"].iloc[0], self.df["Date_Time"].iloc[-1])
+    latitude = 19.40840
+    longitude = -155.28385
+    height = 1000
+
     x = self.df["Date_Time"]
-    y = self.getLongman(x)
+
+    loadingModel = OceanLoadingModel("harmonics/hawaii.txt").getOceanLoadingModel(self.df["Date_Time"])
+    eternaModel = self.getETERNA(latitude, longitude, height, x)
+
+    y = self.getLongman(latitude, longitude, height, x)
     plt.plot(x, y, label="Longman")
-    plt.plot(x, -model(mdates.date2num(x)), label="ETERNA 3.4")
+    plt.plot(x, -eternaModel(mdates.date2num(x)), label="ETERNA 3.4")
+    plt.plot(x, -eternaModel(mdates.date2num(x)) + loadingModel(mdates.date2num(x)), label="ETERNA 3.4 + Ocean Loading")
     plt.plot(x, 1E3 * self.df["TideCorr"], label="Default")
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
     plt.legend()
     plt.show()
 
+  def correctLoading(self, y):
+
+    x = self.df["Date_Time"]
+    loadingModel = OceanLoadingModel("harmonics/hawaii.txt").getOceanLoadingModel(self.df["Date_Time"])
+
+    # Ocean loading needs to be ADDED because it is a CORRECTION
+    return y + loadingModel(mdates.date2num(x))
+
+
   def correctTide(self, y, which):
 
     x = self.df["Date_Time"]
 
-    # Eliminate the default correction
+    # Eliminate the default correction. What is given is the CORRECTION not the EFFECT so undo the correction by subtraction
     y -= 1E3 * self.df["TideCorr"]
 
     latitude = 19.40840
@@ -181,7 +198,7 @@ class DataWrapper():
       raise ValueError("Unknown tidal correction.")
 
 
-  def invert(self, degree, anchor=None, tide="default"):
+  def invert(self, degree, anchor=None, tide="default", loading=False):
 
     """
     def DataWrapper.invert
@@ -194,6 +211,9 @@ class DataWrapper():
     # Correct for the tide using ETERNA
     if tide != "default":
       y = self.correctTide(y, tide)
+
+    if loading:
+      y = self.correctLoading(y)
 
     # First measurement is the anchor
     if anchor is None:
