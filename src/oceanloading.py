@@ -5,6 +5,7 @@ from io import StringIO
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 class OceanLoadingModel():
 
@@ -57,8 +58,6 @@ class OceanLoadingModel():
     Returns the Ocean Loading Model
     """
   
-    HARDISP_DIR = "./hardisp/HARDISP"
-  
     # Get the start and end of the segment
     start = times.iloc[0]
     end = times.iloc[-1]
@@ -71,7 +70,7 @@ class OceanLoadingModel():
     startParameters = start.strftime("%Y %m %d %H %M %S").split(" ")
   
     # This is the CMD we pass to HARDISP
-    cmd = [HARDISP_DIR] + startParameters + [str(minutes), "60"]
+    cmd = ["./hardisp/HARDISP"] + startParameters + [str(minutes), "60"]
   
     # Add the numbers (one unit in mdates is a full day: 1440 minutes in a day)
     x = mdates.date2num(start) + (np.arange(minutes) / 1440)

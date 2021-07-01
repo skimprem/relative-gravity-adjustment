@@ -1,4 +1,4 @@
-from lib import DataLoader
+from src.dataloader import DataLoader
 import sys
 import os
 
@@ -11,19 +11,17 @@ if __name__ == "__main__":
   for file in os.listdir("."):
     if not file.endswith(".csv"): continue
     data = DataLoader.load("USGS", file)
-    data.plotTide()
-    result = data.invert(1)
+    result = data.invert(2)
     result.plot(removeDrift=False)
-    result = data.invert(1, tide="ETERNA", loading=True)
+    result = data.invert(2, tide="ETERNA", loading=True)
     result.plot(removeDrift=False)
-    result = data.invert(1, tide="ETERNA", loading=False)
+    result = data.invert(2, tide="ETERNA", loading=False)
     result.plot(removeDrift=False)
     #result = data.invert(1, tide="Longman")
     #result.plot(removeDrift=True)
     #result = data.invert(1)
     #result.plot(removeDrift=True)
 
-  sys.exit(0)
   data = DataLoader.load("CG6", "CG6.dat")
   result = data.invert(1, tide="ETERNA")
   result.plot(removeDrift=False)
