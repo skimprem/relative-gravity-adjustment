@@ -40,9 +40,11 @@ class DataLoader():
     Reads CG6 data from disk
     """
 
+    from datetime import timedelta
+
     df = pd.read_csv(filepath, comment="/", delimiter="\t", parse_dates=[[1, 2]])
 
-    return DataWrapper(df, filepath)
+    return DataWrapper("CG6", df, filepath)
 
 
   @classmethod
@@ -59,7 +61,7 @@ class DataLoader():
     df.columns = header
     df["StdErr"] = df["StdErr"] / np.sqrt((df["duration"] - df["rej"]))
 
-    return DataWrapper(df, filepath)
+    return DataWrapper("USGS", df, filepath)
 
 
   @classmethod
@@ -69,7 +71,6 @@ class DataLoader():
     def DataLoader.readCG5Dat
     Reads CG5 data and converts it to CG6 format to use the same DataWrapper class
     """
-
     # Change header to match CG6
     header = ["Date_Time", "line", "Station", "altitude", "CorrGrav", "StdErr", "tiltx", "tilty", "temperature", "TideCorr", "duration", "rej", "dec", "terrain"]
 
@@ -80,4 +81,4 @@ class DataLoader():
     # Calculate the stderr (CG5 has stdev).. It samples at 6Hz but CG6 calculates the standard error like this
     df["StdErr"] = df["StdErr"] / np.sqrt(df["duration"] - df["rej"])
 
-    return DataWrapper(df, filepath)
+    return DataWrapper("CG5", df, filepath)

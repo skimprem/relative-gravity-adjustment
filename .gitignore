@@ -1,5 +1,8 @@
 __pycache__
-harmonics
+*.o
+*.a
 .DS_Store
 *.swp
 *.swo
+data
+results

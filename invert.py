@@ -2,35 +2,46 @@ from src.dataloader import DataLoader
 import sys
 import os
 
+def solve(campaign, instrument, filename):
+
+  print("Solving %s" % filename)
+
+  filepath = os.path.join("data", campaign, instrument, filename)
+
+  data = DataLoader.load("USGS", filepath)
+  data.setLocations("locations/stations.csv")
+  result = data.invert(1, tide="Longman", loading=False)
+  result.plot(os.path.join("figures", campaign, "%s.pdf" % filename))
+
+  # Sometimes a circuit is measured relative to HVO1: convert to P1 THROUGH its difference with HVO41.
+  if result.anchor == "HVO41":
+
+    if filename == "578_2012-06-22.csv":
+      result.relativeTo("P1", 29891.0, 5.67)
+    if filename == "578_2011-03-23.csv":
+      result.relativeTo("P1", 29799.0, 2.61)
+    if filename == "578_2012-11-27.csv":
+      result.relativeTo("P1", 29947.0, 2.76)
+
+    if filename == "579_2012-06-22.csv":
+      result.relativeTo("P1", 29915.0, 9.1)
+    if filename == "579_2011-03-23.csv":
+      result.relativeTo("P1", 29811.0, 5.9)
+    if filename == "579_2012-11-27.csv":
+      result.relativeTo("P1", 29965.0, 2.87)
+
+  result.save("results/%s/%s/%s.dat" % (campaign, instrument, filename))
+
+
 if __name__ == "__main__":
 
   """
   Examples
   """
 
-  latitude = 52.0
-  longitude = 4.38
-  height = 0
-
-  data = DataLoader.load("USGS", "578_2009-12-02.csv")
-  #data = DataLoader.load("CG6", "CG6.dat")
-  data.setLocations("locations/stations.csv")
-
-  #result = data.invert(1)
-  #result.plot(removeDrift=False)
-  #result = data.invert(1, tide="Longman")
-  #result.plot(removeDrift=False)
-  #result = data.invert(1, tide="ETERNA")
-  #result.plot(removeDrift=False)
-  result = data.invert(1, tide="ETERNA", loading=True)
-  result.plot(removeDrift=False)
-  result.plotResiduals()
-  result.save("CG6-results.dat")
-
-  #data = DataLoader.load("CG5", "CG5.dat")
-  #data.setLocation(latitude, longitude, height)
-  #result = data.invert(1)
-  #result.plot(removeDrift=False)
-  #result = data.invert(1, tide="Longman")
-  #result.plot(removeDrift=False)
-  #result.save("CG5-results.dat")
+  for campaign in os.listdir("data"):
+    for instrument in os.listdir(os.path.join("data", campaign)):
+      for filename in os.listdir(os.path.join("data", campaign, instrument)):
+        if filename != "579_2012-10-24.csv":
+          continue
+        solve(campaign, instrument, filename)

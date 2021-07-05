@@ -34,7 +34,14 @@ class InversionResult():
     self.chi = chi
 
 
-  def save(self, filepath):
+  def relativeTo(self, anchor, g, std):
+
+    self.anchor = anchor
+    self.mdg += g
+    self.stddg = np.sqrt(self.stddg ** 2 + std ** 2)
+
+
+  def save(self, filepath, relativeTo=None):
 
     """
     property InversionResult.save
@@ -124,7 +131,7 @@ class InversionResult():
     return "%sµGal/day" % int(round(86400 * self.drift[1]))
 
 
-  def plot(self, removeDrift=False):
+  def plot(self, filepath, removeDrift=False):
 
     """
     def InversionResult.plot
@@ -159,8 +166,9 @@ class InversionResult():
 
     plt.legend(frameon=True)
     plt.title("Relative Gravity Adjustment: Inversion Results (%s)" % self.filename)
-    plt.xlabel("Timestamp")
+    plt.xlabel("Timestamp (UTC)")
     plt.ylabel("Relative Gravity (μGal)")
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 
-    plt.show()
+    plt.savefig(filepath, bbox_inches="tight")
+    plt.close()

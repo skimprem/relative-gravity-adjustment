@@ -16,11 +16,19 @@ class DataWrapper():
   Wraps the read CG5, CG6 data in a pandas dataframe
   """
 
-  def __init__(self, df, filepath):
+  def __init__(self, inp, df, filepath):
+
+    """
+    DataWrapper.__init__
+    Initializes a datawrapper
+    """
 
     # Wrap the dataframe
-    self.df = df[~np.isnan(df["StdErr"])]
+    self.inp = inp
+    self.df = self.filter(df)
     self.filename = os.path.basename(filepath)
+
+    # Metadata
     self.locations = None
 
 
@@ -58,27 +66,43 @@ class DataWrapper():
     Returns the station name of the first measurement: if not specified this is the default anchor
     """
 
-    return str(self.df["Station"][0])
+    return str(self.df["Station"].iloc[0])
+
+
+  def filter(self, df):
+
+    """
+    def DataWrapper.filter
+    Applies a filter to the data to remove poor data
+    """
+
+    # Only keep the accepted values
+    df = df[(df["Accepted"] == 1)]
+    df = df[(np.abs(df["TiltX"]) < 25) & (np.abs(df["TiltY"]) < 25)]
+    df = df[df["duration"] >= 60]
+    df = df[df["rej"] < 5]
+
+    return df
 
 
   def extract(self):
 
-    """
-    def DataWrapper.extract
-    Extracts the necessary information from the data file
-    """
+    df = self.df
 
-    benchmarks = np.array(self.df["Station"], dtype=str)
+    benchmarks = np.array(df["Station"], dtype=str)
 
-    x = np.array(self.df["Date_Time"])
+    x = np.array(df["Date_Time"])
 
     # Scale to microGal
-    y = 1E3 * np.array(self.df["CorrGrav"])
-    s = 1E3 * np.array(self.df["StdErr"])
+    y = 1E3 * np.array(df["CorrGrav"], dtype=float)
+    s = 1E3 * np.array(df["StdErr"])
 
     # Zero out first measurement: OK since relative
     x = 86400 * (mdates.date2num(x) - mdates.date2num(x[0]))
     y -= y[0]
+
+    # Undo the instrument tide correction
+    y -= 1E3 * df["TideCorr"]
 
     return benchmarks, x, y, s
 
@@ -174,8 +198,6 @@ class DataWrapper():
     Plots tidal comparison between Longman, Instrument Default, ETERNA 3.4
     """
 
-    location = (0, 0, 0)
-
     plt.style.use("seaborn")
 
     # Create a tidal model
@@ -184,7 +206,7 @@ class DataWrapper():
     x = self.df["Date_Time"]
 
     # Create an ocean loading model
-    loadingModel = OceanLoadingModel("harmonics/HOVL-G.txt").getOceanLoadingModel(self.df["Date_Time"])
+    loadingModel = OceanLoadingModel("ocl/harmonics/HOVL-G.txt").getOceanLoadingModel(self.df["Date_Time"])
 
     eternaModel = tideModel.getETERNA(x)
 
@@ -212,7 +234,7 @@ class DataWrapper():
     for benchmark in set(self.df["Station"]):
       idx = self.df["Station"] == benchmark
       xs = x[idx]
-      loadingModel = OceanLoadingModel("harmonics/%ss.txt" % benchmark).getOceanLoadingModel(xs)
+      loadingModel = OceanLoadingModel("ocl/harmonics/%s.txt" % benchmark).getOceanLoadingModel(xs)
 
       # Ocean loading needs to be ADDED because it is a CORRECTION
       y[idx] += loadingModel(mdates.date2num(xs))
@@ -228,11 +250,8 @@ class DataWrapper():
     """
 
     # Must be supplied
-    if self.locations is None:
-      raise ValueError("Cannot predict tides without a location. Use .setLocations(filename)")
 
     x = self.df["Date_Time"]
-    y -= 1E3 * self.df["TideCorr"]
 
     for benchmark in set(self.df["Station"]):
       
@@ -274,6 +293,7 @@ class DataWrapper():
     if tide != "default":
       y = self.correctTide(y, tide)
 
+    # Ocean loading model
     if loading:
       y = self.correctLoading(y)
 

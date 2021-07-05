@@ -50,7 +50,7 @@ class TidalModel():
     pt = pygtide.pygtide(msg=False)
   
     # Start, duration and sample rate of the model
-    duration = max(48, (end - start).days * 24)
+    duration = max(240, (end - start).days * 24)
     samplerate = 60
  
     # Predict the tides using ETERNA
