@@ -21,7 +21,7 @@ def solve(campaign, instrument, filename):
   result = data.invert(1, tide="Longman", loading=False)
 
   # Plot the inversion results
-  result.plot(os.path.join("figures", campaign, "%s.pdf" % filename))
+  result.plot(os.path.join("figures", campaign, "%s.pdf" % filename), removeDrift=True)
 
   # Sometimes a circuit is measured relative to HVO1
   # convert to P1 THROUGH its difference with HVO41.
