@@ -1,12 +1,15 @@
 import os
-from matplotlib import cm
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
 
+import matplotlib.ticker as plticker
+import matplotlib.pyplot as plt
+
 from matplotlib.legend_handler import HandlerTuple
 from pyproj import Proj
+from matplotlib import cm
+
 
 def loadResult(campaign, instrument, filename):
 
@@ -25,6 +28,11 @@ def loadResult(campaign, instrument, filename):
 
 
 def plotDEM(myProj):
+
+  """
+  def plotDEM
+  Plots a Kilaueau DEM 
+  """
 
   levels = 21
   dataset = xr.open_dataset("dem/kilauea.nc")
@@ -51,6 +59,10 @@ def plotDEM(myProj):
     zorder=0
   )
 
+  # Set linewidth 
+  plt.gca().grid(b=True, which="major", color="white", linewidth=0.75)
+
+
 def compareMap(collector, instrument, one, two, scale):
 
   """
@@ -73,8 +85,8 @@ def compareMap(collector, instrument, one, two, scale):
 
   plt.title("Change in gravity (μGal) between %s and %s (%s)" % (one, two, instrument), pad=20)
 
-  one = collector[one][instrument]
-  two = collector[two][instrument]
+  dataOne = collector[one][instrument]
+  dataTwo = collector[two][instrument]
 
   locations = pd.read_csv("locations/stations.csv", delimiter="\t")
   xProj, yProj = myProj(locations["Longitude"], locations["Latitude"])
@@ -88,12 +100,15 @@ def compareMap(collector, instrument, one, two, scale):
     if station == "P1":
       b = plt.scatter(longitude, latitude, marker="*", s=200, color="yellow", linewidth=1, edgecolor="black")
       continue
-    elif not station in one or not station in two:
+    elif not station in dataOne or not station in dataTwo:
       missing.append((longitude, latitude))
       continue
 
     # Calculate the difference
-    dg, std = difference(one, two, station)
+    dg, std = difference(dataOne, dataTwo, station)
+
+    # Read height
+    dg += getHeight(one, two, station)
 
     benchmarks.append((longitude, latitude))
     colors.append(dg)
@@ -115,7 +130,7 @@ def compareMap(collector, instrument, one, two, scale):
   e = plt.scatter(np.nan, np.nan, color=cmap(0.5), edgecolor="black", linewidth=1)
   f = plt.scatter(np.nan, np.nan, color=cmap(0.6), edgecolor="black", linewidth=1)
   g = plt.scatter(np.nan, np.nan, color=cmap(0.8), edgecolor="black", linewidth=1)
-  plt.legend([a, b, (c, d, e, f, g)], ("Unavailable", "Anchor (P1)", "Campaign"), scatterpoints=1, numpoints=2, handler_map={tuple: HandlerTuple(ndivide=None)}, frameon=True, prop={'size': 8})
+  plt.legend([a, b, (c, d, e, f, g)], ("Unavailable", "Anchor (P1)", "Campaign"), scatterpoints=1, numpoints=2, handler_map={tuple: HandlerTuple(ndivide=None)}, frameon=True, prop={"size": 8})
 
   # Figure setup
   plt.tight_layout()
@@ -131,11 +146,36 @@ def compareMap(collector, instrument, one, two, scale):
 
 def difference(one, two, station):
 
+  """
+  def difference
+  Reads heights from a .CSV file
+  """
+
+  # Difference between two campaigns
   dg = two[station][0]  - one[station][0]
+
   # 2 times standard deviation from differences sqrt(σ1^2 + σ2^2)
   std = 2 * np.sqrt(two[station][1] ** 2 + one[station][1] ** 2)
 
   return dg, std
+
+
+def getHeight(one, two, station):
+
+  """
+  def getHeight
+  Reads heights from a .CSV file
+  """
+
+  df = pd.read_csv(
+    "heights.csv",
+    delimiter="\t",
+    comment="#"
+  )
+
+  # Undo the effect of height change (negative height will give positive gravity)
+  return 3.086 * df[df["Benchmark"] == station].iloc[0]["%s %s" % (one, two)]
+
 
 def compareDistribution(collector, instrument, one, two, scale):
 
@@ -152,18 +192,21 @@ def compareDistribution(collector, instrument, one, two, scale):
   filename = "%s %s %s" % (one, two, instrument)
 
   # Fetch the results
-  one = collector[one][instrument]
-  two = collector[two][instrument]
+  dataOne = collector[one][instrument]
+  dataTwo = collector[two][instrument]
 
   locations = pd.read_csv("locations/stations.csv", delimiter="\t")
 
   for station in locations["BM"]:
 
-    if not station in one or not station in two:
+    if not station in dataOne or not station in dataTwo:
       plt.bar(station, 0, edgecolor="black", yerr=0, capsize=4, linewidth=1, color=color)
       continue
 
-    dg, std = difference(one, two, station)
+    dg, std = difference(dataOne, dataTwo, station)
+
+    # Height correction
+    dg += getHeight(one, two, station)
 
     if (np.abs(dg) - std) < 0 or dg == 0:
       color = "white"
@@ -245,30 +288,18 @@ if __name__ == "__main__":
           # Update the dictionary
           collector[campaign][instrument][benchmark] = (gravity, sd)
 
-  compareMap(collector, "578", "2009-Dec", "2010-Jun", 70)
-  compareMap(collector, "578", "2010-Jun", "2011-Mar", 90)
-  compareMap(collector, "578", "2011-Mar", "2012-Jun", 200)
-  compareMap(collector, "578", "2012-Jun", "2012-Nov", 200)
-  compareMap(collector, "578", "2012-Nov", "2015-Sept", 250)
-  compareMap(collector, "578", "2015-Sept", "2017-Apr", 100)
 
-  compareMap(collector, "579", "2009-Dec", "2010-Jun", 70)
-  compareMap(collector, "579", "2010-Jun", "2011-Mar", 90)
-  compareMap(collector, "579", "2011-Mar", "2012-Jun", 200)
-  compareMap(collector, "579", "2012-Jun", "2012-Nov", 200)
-  compareMap(collector, "579", "2012-Nov", "2015-Sept", 250)
-  compareMap(collector, "579", "2015-Sept", "2017-Apr", 100)
+  # Start, end, scale
+  combinations = [
+    ("2009-Dec", "2010-Jun", 70),
+    ("2010-Jun", "2011-Mar", 90),
+    ("2011-Mar", "2012-Jun", 200),
+    ("2012-Jun", "2012-Nov", 200),
+    ("2012-Nov", "2015-Sept", 250),
+    ("2015-Sept", "2017-Apr", 100)
+  ]
 
-  #compareDistribution(collector, "578", "2009-Dec", "2010-Jun", 70)
-  #compareDistribution(collector, "578", "2010-Jun", "2011-Mar", 90)
-  #compareDistribution(collector, "578", "2011-Mar", "2012-Jun", 200)
-  #compareDistribution(collector, "578", "2012-Jun", "2012-Nov", 200)
-  #compareDistribution(collector, "578", "2012-Nov", "2015-Sept", 250)
-  #compareDistribution(collector, "578", "2015-Sept", "2017-Apr", 100)
-
-  #compareDistribution(collector, "579", "2009-Dec", "2010-Jun", 70)
-  #compareDistribution(collector, "579", "2010-Jun", "2011-Mar", 90)
-  #compareDistribution(collector, "579", "2011-Mar", "2012-Jun", 200)
-  #compareDistribution(collector, "579", "2012-Jun", "2012-Nov", 200)
-  #compareDistribution(collector, "579", "2012-Nov", "2015-Sept", 250)
-  #compareDistribution(collector, "579", "2015-Sept", "2017-Apr", 100)
+  for instrument in ["578", "579"]:
+    for combination in combinations:
+      compareMap(collector, instrument, *combination)
+      compareDistribution(collector, instrument, *combination)
