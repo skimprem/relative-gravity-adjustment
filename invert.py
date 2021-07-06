@@ -4,16 +4,27 @@ import os
 
 def solve(campaign, instrument, filename):
 
+  """
+  def solve
+  Calls relative gravity code and writes results to file
+  """
+
   print("Solving %s" % filename)
 
   filepath = os.path.join("data", campaign, instrument, filename)
 
+  # Load the data
   data = DataLoader.load("USGS", filepath)
   data.setLocations("locations/stations.csv")
+
+  # Complete the inversion
   result = data.invert(1, tide="Longman", loading=False)
+
+  # Plot the inversion results
   result.plot(os.path.join("figures", campaign, "%s.pdf" % filename))
 
-  # Sometimes a circuit is measured relative to HVO1: convert to P1 THROUGH its difference with HVO41.
+  # Sometimes a circuit is measured relative to HVO1
+  # convert to P1 THROUGH its difference with HVO41.
   if result.anchor == "HVO41":
 
     if filename == "578_2012-06-22.csv":
@@ -36,12 +47,11 @@ def solve(campaign, instrument, filename):
 if __name__ == "__main__":
 
   """
-  Examples
+  Main entrypoint for relative gravity solutions
   """
 
+  # Go over the gravity data
   for campaign in os.listdir("data"):
     for instrument in os.listdir(os.path.join("data", campaign)):
       for filename in os.listdir(os.path.join("data", campaign, instrument)):
-        if filename != "579_2012-10-24.csv":
-          continue
         solve(campaign, instrument, filename)
