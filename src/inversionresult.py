@@ -14,7 +14,7 @@ class InversionResult():
   Container for results that come from the gravity adjustment inversion
   """
 
-  def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations, chi):
+  def __init__(self, parent, degree, anchor, drift, x, y, s, dg, vardg, residuals, changes, stations, chi, tare, dtare):
 
     self.start = parent.start
     self.end = parent.end
@@ -32,6 +32,8 @@ class InversionResult():
     self.changes = changes
     self.stations = stations
     self.chi = chi
+    self.tare = tare or 0
+    self.dtare = dtare or 0
 
 
   def relativeTo(self, anchor, g, std):
@@ -59,6 +61,7 @@ class InversionResult():
       "# Anchor: %s" % self.anchor,
       "# Polynomial Degree: %s" % self.degree,
       "# Linear Drift Rate: %s" % self.getDriftRate(),
+      "# Tare Index: %s (%s µGal)" % (self.tare, np.round(self.dtare)),
       "Benchmark\tGravity (µGal)\tSD (µGal)"
     ])
 

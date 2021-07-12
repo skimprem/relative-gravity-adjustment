@@ -83,7 +83,7 @@ def compareMap(collector, instrument, one, two, scale):
 
   filename = "%s %s %s" % (one, two, instrument)
 
-  plt.title("Change in gravity (μGal) between %s and %s (%s)" % (one, two, instrument), pad=20)
+  plt.title("Change in gravity (μGal) between %s and %s \n Instrument %s" % (one, two, instrument), pad=20)
 
   dataOne = collector[one][instrument]
   dataTwo = collector[two][instrument]
@@ -200,7 +200,7 @@ def compareDistribution(collector, instrument, one, two, scale):
   for station in locations["BM"]:
 
     if not station in dataOne or not station in dataTwo:
-      plt.bar(station, 0, edgecolor="black", yerr=0, capsize=4, linewidth=1, color=color)
+      plt.bar(station, 0, edgecolor="black", yerr=0, capsize=0, linewidth=0, color=color, error_kw=dict(capthick=0))
       continue
 
     dg, std = difference(dataOne, dataTwo, station)
@@ -291,15 +291,15 @@ if __name__ == "__main__":
 
   # Start, end, scale
   combinations = [
-    ("2009-Dec", "2010-Jun", 70),
+    ("2009-Dec", "2010-Jun", 80),
     ("2010-Jun", "2011-Mar", 90),
-    ("2011-Mar", "2012-Jun", 200),
+    ("2011-Mar", "2012-Jun", 250),
     ("2012-Jun", "2012-Nov", 200),
-    ("2012-Nov", "2015-Sept", 250),
-    ("2015-Sept", "2017-Apr", 100)
+    ("2012-Nov", "2015-Sept", 200),
+    ("2015-Sept", "2017-Apr", 180)
   ]
 
   for instrument in ["578", "579"]:
     for combination in combinations:
-      compareMap(collector, instrument, *combination)
+      #compareMap(collector, instrument, *combination)
       compareDistribution(collector, instrument, *combination)

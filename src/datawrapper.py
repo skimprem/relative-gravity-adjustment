@@ -78,7 +78,7 @@ class DataWrapper():
 
     # Only keep the accepted values
     df = df[(df["Accepted"] == 1)]
-    df = df[(np.abs(df["TiltX"]) < 25) & (np.abs(df["TiltY"]) < 25)]
+    df = df[(np.abs(df["TiltX"]) < 20) & (np.abs(df["TiltY"]) < 20)]
     df = df[df["duration"] >= 60]
     df = df[df["rej"] < 5]
 
@@ -143,6 +143,17 @@ class DataWrapper():
 
     # The gravity design matrix (binary)
     return np.array(matrix_stations.T == matrix_changes, dtype=np.int)
+
+
+  def setupTareDesign(self, stations, tare):
+
+    Gtare = np.zeros(stations.size, dtype=np.int)
+
+    # Set the respective tare indices to one
+    if tare != 0:
+      Gtare[tare:] = 1
+
+    return np.array([Gtare])
 
 
   def setupPolynomialDesign(self, degree, x):
@@ -279,21 +290,21 @@ class DataWrapper():
     return y
 
 
-  def invert(self, degree, anchor=None, tide="default", loading=False):
+  def invert(self, degree, anchor=None, tide="default", loading=False, tare=None):
 
     """
     def DataWrapper.invert
     Main routine for the inversion
     """
 
-    # Read data from file
+    # Read the data from the datawrapper
     stations, x, y, s = self.extract()
 
-    # Correct for the tide using ETERNA
+    # Correct for the tide
     if tide != "default":
       y = self.correctTide(y, tide)
 
-    # Ocean loading model
+    # Apply the ocean loading model
     if loading:
       y = self.correctLoading(y)
 
@@ -310,8 +321,14 @@ class DataWrapper():
     Gpoly = self.setupPolynomialDesign(degree, x)
     # The gravity design matrix
     Gdg = self.setupGravityDesign(stations, changes)
-    # Combine polynomial and gravity design matrices
-    G = np.hstack((Gpoly.T, Gdg))
+
+    # Combine polynomial and gravity design matrices: different depending on whether we introduce a tare
+    if tare is None:
+      G = np.hstack((Gpoly.T, Gdg))
+    else:
+      # Tare matrix
+      Gtare = self.setupTareDesign(stations, tare)
+      G = np.hstack((Gpoly.T, Gdg, Gtare.T))
 
     # Weight matrix
     W = np.diag(np.reciprocal(np.square(s)))
@@ -321,11 +338,23 @@ class DataWrapper():
 
     # These are the drift parameters
     mbeta = lsq[:degree + 1]
-    # Gravity differences & uncertainties
-    mdg = lsq[degree + 1:]
-    stddg = std[degree + 1:]
+
+    if tare is None:
+      # Gravity differences & uncertainties
+      mdg = lsq[degree + 1:]
+      stddg = std[degree + 1:]
+    else:
+      # Gravity differences & uncertainties
+      mdg = lsq[degree + 1:-1]
+      stddg = std[degree + 1:-1]
 
     # Eliminate the gravity differences for plotting
     y -= Gdg @ mdg
 
-    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi)
+    # Eliminate the tare
+    dtare = None
+    if tare is not None:
+      y -= Gtare[0] * lsq[-1]
+      dtare = lsq[-1]
+
+    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi, tare, dtare)

@@ -2,6 +2,39 @@ from src.dataloader import DataLoader
 import sys
 import os
 
+def getTare(filename):
+
+  """
+  def getTare
+  This helps the inversion to fix the tare.
+  """
+
+  # The returned value is the offset of the sample
+  # These are definitely tares
+  if filename == "579_2009-12-02.csv":
+    return 20
+  if filename == "578_2012-11-27.csv":
+    return 72
+  if filename == "578_2017-04-21.csv":
+    return 66
+
+  return None
+
+  # Could be but.. it is really difficult to say for sure
+  if filename == "578_2017-04-24.csv":
+    return 51
+  if filename == "578_2017-04-26.csv":
+    return 23
+  if filename == "579_2017-04-24.csv":
+    return 60
+  if filename == "578_2017-04-20.csv":
+    return 40
+  if filename == "579_2015-09-15.csv":
+    return 56
+
+  return None
+
+
 def solve(campaign, instrument, filename):
 
   """
@@ -17,11 +50,14 @@ def solve(campaign, instrument, filename):
   data = DataLoader.load("USGS", filepath)
   data.setLocations("locations/stations.csv")
 
+  # Get index of when tare needs to be restored
+  tare = getTare(filename)
+
   # Complete the inversion
-  result = data.invert(1, tide="Longman", loading=False)
+  result = data.invert(1, tide="ETERNA", loading=True, tare=tare)
 
   # Plot the inversion results
-  result.plot(os.path.join("figures", campaign, "%s.pdf" % filename), removeDrift=True)
+  result.plot(os.path.join("figures", campaign, "%s.pdf" % filename), removeDrift=False)
 
   # Sometimes a circuit is measured relative to HVO1
   # convert to P1 THROUGH its difference with HVO41.
