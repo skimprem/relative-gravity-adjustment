@@ -197,10 +197,10 @@ class DataWrapper():
     # Get the inversion results
     lsq = N @ G.T @ W @ y
     # Reduced chi-squared (degrees of freedom = number of observations - number of model)
-    dof = y.size - np.size(G, 1) - 1
+    dof = y.size - np.size(G, 1) 
     # These are the residuals from the model
     residuals = y - (G @ lsq)
-    # Calculate chi squared
+    # Calculate reduced chi squared
     rchi = (residuals.T @ W @ residuals) / dof
     # Variance of unit weight multiplied by N
     res = rchi * N

@@ -83,7 +83,7 @@ def compareMap(collector, instrument, one, two, scale):
 
   filename = "%s %s %s" % (one, two, instrument)
 
-  plt.title("Change in gravity (μGal) between %s and %s \n Instrument %s" % (one, two, instrument), pad=20)
+  plt.title("Change in Gravity Difference with Anchor P1 \n Between %s and %s \n Instrument %s" % (one, two, instrument))
 
   dataOne = collector[one][instrument]
   dataTwo = collector[two][instrument]
@@ -186,7 +186,8 @@ def compareDistribution(collector, instrument, one, two, scale):
 
   plt.style.use("seaborn")
 
-  plt.title("Change in Gravity between %s and %s (%s)" % (one, two, instrument))
+  plt.figure(figsize=(5, 8))
+  plt.title("Change in Gravity Difference with Anchor P1 \n Between %s and %s \n Instrument %s" % (one, two, instrument))
 
   # Output filename
   filename = "%s %s %s" % (one, two, instrument)
@@ -197,10 +198,13 @@ def compareDistribution(collector, instrument, one, two, scale):
 
   locations = pd.read_csv("locations/stations.csv", delimiter="\t")
 
-  for station in locations["BM"]:
+  for station in sorted(locations["BM"]):
+
+    if station == "P1":
+      continue
 
     if not station in dataOne or not station in dataTwo:
-      plt.bar(station, 0, edgecolor="black", yerr=0, capsize=0, linewidth=0, color=color, error_kw=dict(capthick=0))
+      plt.barh(station, 0, edgecolor="black", xerr=0, capsize=0, linewidth=0, color=color, error_kw=dict(capthick=0))
       continue
 
     dg, std = difference(dataOne, dataTwo, station)
@@ -215,17 +219,23 @@ def compareDistribution(collector, instrument, one, two, scale):
     elif dg < 0:
       color = "blue"
 
-    plt.bar(station, dg, edgecolor="black", yerr=std, capsize=2, linewidth=1, color=color, error_kw=dict(capthick=1))
+    #plt.bar(station, dg, edgecolor="black", yerr=std, capsize=2, linewidth=1, color=color, error_kw=dict(capthick=1))
+    plt.barh(station, dg, edgecolor="black", xerr=std, capsize=2, linewidth=1, color=color, error_kw=dict(capthick=1))
 
-  plt.ylim(-scale, scale)
-  plt.xlabel("Gravity Benchmark")
-  plt.ylabel("Change in Gravity (µGal)")
+  plt.xlim(-scale, scale)
+  plt.margins(y=0)
+  plt.ylabel("Benchmark")
+  plt.xlabel("Change in Gravity Difference (µGal)")
+  plt.yticks(ha="left", position=(-0.13, 0))
   plt.tight_layout()
-  plt.xticks(rotation=90)
 
   plt.savefig("figures/dist/%s.pdf" % filename, bbox_inches="tight")
   plt.close()
 
+
+def relativeTo(one, onesd, two, twosd):
+
+  return one + two, np.sqrt(onesd ** 2 + twosd ** 2)
 
 if __name__ == "__main__":
 
@@ -258,41 +268,60 @@ if __name__ == "__main__":
           benchmark = row["Benchmark"]
           gravity = row["Gravity (µGal)"]
           sd = row["SD (µGal)"]
+          anchor = row["Anchor"]
 
-          # Stations that are measured twice: let's pick the best ones and skip others
-          if (filename == "578_2010-07-15.csv.dat" and benchmark == "HVO41") or\
-             (filename == "579_2010-07-15.csv.dat" and benchmark == "HVO41") or\
-             (filename == "578_2010-06-30.csv.dat" and benchmark == "21YY") or\
-             (filename == "579_2010-06-30.csv.dat" and benchmark == "21YY") or\
-             (filename == "578_2010-07-09.csv.dat" and benchmark == "HVO33") or\
-             (filename == "579_2010-07-09.csv.dat" and benchmark == "HVO33") or\
-             (filename == "578_2010-07-15.csv.dat" and benchmark == "204YY") or\
-             (filename == "579_2010-07-15.csv.dat" and benchmark == "204YY") or\
-             (filename == "578_2010-06-29.csv.dat" and benchmark == "T3973") or\
-             (filename == "579_2010-06-29.csv.dat" and benchmark == "T3973") or\
-             (filename == "578_2010-07-16.csv.dat" and benchmark == "79-511") or\
-             (filename == "578_2012-10-24.csv.dat" and benchmark == "HVO41") or\
-             (filename == "579_2012-10-24.csv.dat" and benchmark == "HVO41") or\
-             (filename == "578_2017-04-24.csv.dat" and benchmark == "HVO35") or\
-             (filename == "579_2017-04-24.csv.dat" and benchmark == "HVO35") or\
-             (filename == "578_2017-04-21.csv.dat" and benchmark == "93YY") or\
-             (filename == "579_2017-04-21.csv.dat" and benchmark == "93YY") or\
-             (filename == "578_2017-04-21.csv.dat" and benchmark == "HVO25") or\
-             (filename == "579_2017-04-21.csv.dat" and benchmark == "HVO25") or\
-             (filename == "578_2017-04-20.csv.dat" and benchmark == "113YY") or\
-             (filename == "579_2017-05-03.csv.dat" and benchmark == "113YY") or\
-             (filename == "578_2015-09-15.csv.dat" and benchmark == "HVO49") or\
-             (filename == "579_2015-09-15.csv.dat" and benchmark == "HVO49"):
+          # Sometimes a circuit is measured relative to HVO1
+          # convert to P1 THROUGH its difference with HVO41: this is not ideal..
+          if anchor == "HVO41":
+
+            if filename == "578_2012-06-22.dat":
+              gravity, sd = relativeTo(gravity, sd, 29891.0, 5.67)
+            if filename == "578_2011-03-23.dat":
+              gravity, sd = relativeTo(gravity, sd, 29799.0, 2.61)
+            if filename == "578_2012-11-27.dat":
+              gravity, sd = relativeTo(gravity, sd, 29947.0, 2.76)
+
+            if filename == "579_2012-06-22.dat":
+              gravity, sd = relativeTo(gravity, sd, 29915.0, 9.1)
+            if filename == "579_2011-03-23.dat":
+              gravity, sd = relativeTo(gravity, sd, 29811.0, 5.9)
+            if filename == "579_2012-11-27.dat":
+              gravity, sd = relativeTo(gravity, sd, 29965.0, 2.87)
+
+          # Stations that are measured twice in a campaign: let's pick the best ones and skip the following:
+          if (filename == "578_2010-07-15.dat" and benchmark == "HVO41") or\
+             (filename == "579_2010-07-15.dat" and benchmark == "HVO41") or\
+             (filename == "578_2010-06-30.dat" and benchmark == "21YY") or\
+             (filename == "579_2010-06-30.dat" and benchmark == "21YY") or\
+             (filename == "578_2010-07-09.dat" and benchmark == "HVO33") or\
+             (filename == "579_2010-07-09.dat" and benchmark == "HVO33") or\
+             (filename == "578_2010-07-15.dat" and benchmark == "204YY") or\
+             (filename == "579_2010-07-15.dat" and benchmark == "204YY") or\
+             (filename == "578_2010-06-29.dat" and benchmark == "T3973") or\
+             (filename == "579_2010-06-29.dat" and benchmark == "T3973") or\
+             (filename == "578_2010-07-16.dat" and benchmark == "79-511") or\
+             (filename == "578_2012-10-24.dat" and benchmark == "HVO41") or\
+             (filename == "579_2012-10-24.dat" and benchmark == "HVO41") or\
+             (filename == "578_2017-04-24.dat" and benchmark == "HVO35") or\
+             (filename == "579_2017-04-24.dat" and benchmark == "HVO35") or\
+             (filename == "578_2017-04-21.dat" and benchmark == "93YY") or\
+             (filename == "579_2017-04-21.dat" and benchmark == "93YY") or\
+             (filename == "578_2017-04-21.dat" and benchmark == "HVO25") or\
+             (filename == "579_2017-04-21.dat" and benchmark == "HVO25") or\
+             (filename == "578_2017-04-20.dat" and benchmark == "113YY") or\
+             (filename == "579_2017-05-03.dat" and benchmark == "113YY") or\
+             (filename == "578_2015-09-15.dat" and benchmark == "HVO49") or\
+             (filename == "579_2015-09-15.dat" and benchmark == "HVO49"):
             continue
 
           # Update the dictionary
           collector[campaign][instrument][benchmark] = (gravity, sd)
 
 
-  # Start, end, scale
+  # Start, end, scale of graph
   combinations = [
     ("2009-Dec", "2010-Jun", 80),
-    ("2010-Jun", "2011-Mar", 90),
+    ("2010-Jun", "2011-Mar", 100),
     ("2011-Mar", "2012-Jun", 250),
     ("2012-Jun", "2012-Nov", 200),
     ("2012-Nov", "2015-Sept", 200),
@@ -301,5 +330,5 @@ if __name__ == "__main__":
 
   for instrument in ["578", "579"]:
     for combination in combinations:
-      #compareMap(collector, instrument, *combination)
-      compareDistribution(collector, instrument, *combination)
+      compareMap(collector, instrument, *combination)
+      #compareDistribution(collector, instrument, *combination)

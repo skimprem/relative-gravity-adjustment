@@ -37,13 +37,6 @@ class InversionResult():
     self.tm = tm
 
 
-  def relativeTo(self, anchor, g, std):
-
-    self.anchor = anchor
-    self.mdg += g
-    self.stddg = np.sqrt(self.stddg ** 2 + std ** 2)
-
-
   def save(self, filepath, relativeTo=None):
 
     """
@@ -52,18 +45,22 @@ class InversionResult():
     """
 
     # Create the compiled array to be stored
-    data = np.array([self.changes, np.round(self.mdg), np.round(self.stddg, 2)]).T
+    data = np.array([
+      self.changes,
+      np.round(self.mdg),
+      np.round(self.stddg, 2),
+      np.full(len(self.changes), self.anchor)
+    ]).T
 
     header = "\n".join([
       "# CG5, CG6 Relative Gravity Adjustment Export",
       "# Version: %s" % __VERSION__,
       "# Created: %s" % datetime.utcnow(),
       "# Reduced Chi Squared: %s" % self.chi,
-      "# Anchor: %s" % self.anchor,
       "# Polynomial Degree: %s" % self.degree,
       "# Linear Drift Rate: %s" % self.getDriftRate(),
-      "# Tare Index: %s (%s µGal)" % (self.tare, np.round(self.dtare)),
-      "Benchmark\tGravity (µGal)\tSD (µGal)"
+      "# Tare Index: %s (%sµGal)" % (self.tare, np.round(self.dtare)),
+      "Benchmark\tGravity (µGal)\tSD (µGal)\tAnchor"
     ])
 
     # Save to file

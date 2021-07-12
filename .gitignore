@@ -1,4 +1,5 @@
 __pycache__
+hardisp/HARDISP
 *.o
 *.a
 .DS_Store
