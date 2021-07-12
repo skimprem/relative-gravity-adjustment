@@ -15,16 +15,14 @@ def getTare(filename):
     return 20
   if filename == "578_2012-11-27.csv":
     return 72
+  if filename == "579_2009-12-15.csv":
+    return 34
   if filename == "578_2017-04-21.csv":
     return 66
-
-  return None
 
   # Could be but.. it is really difficult to say for sure
   if filename == "578_2017-04-24.csv":
     return 51
-  if filename == "578_2017-04-26.csv":
-    return 23
   if filename == "579_2017-04-24.csv":
     return 60
   if filename == "578_2017-04-20.csv":
@@ -54,7 +52,8 @@ def solve(campaign, instrument, filename):
   tare = getTare(filename)
 
   # Complete the inversion
-  result = data.invert(1, tide="ETERNA", loading=True, tare=tare)
+  #result = data.invert(1, tide="ETERNA", loading=True, tare=tare)
+  result = data.invert(1, tide="Longman", loading=False, tare=tare)
 
   # Plot the inversion results
   result.plot(os.path.join("figures", campaign, "%s.pdf" % filename), removeDrift=False)

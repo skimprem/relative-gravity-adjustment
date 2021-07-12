@@ -42,7 +42,10 @@ class DataLoader():
 
     from datetime import timedelta
 
+    header = ["Date_Time", "Station", "CorrGrav", "Line", "StdDev", "StdErr", "RawGrav", "TiltX", "TiltY", "SensorTemp", "TideCorr", "TiltCorr", "TempCorr", "DriftCorr", "duration", "InstrHeight", "LatUser", "LonUser", "ElevUser", "LatGPS", "LonGPS", "ElevGPS", "Corrections[drift-temp-na-tide-tilt]"]
+
     df = pd.read_csv(filepath, comment="/", delimiter="\t", parse_dates=[[1, 2]])
+    df.columns = header
 
     return DataWrapper("CG6", df, filepath)
 
@@ -72,7 +75,7 @@ class DataLoader():
     Reads CG5 data and converts it to CG6 format to use the same DataWrapper class
     """
     # Change header to match CG6
-    header = ["Date_Time", "line", "Station", "altitude", "CorrGrav", "StdErr", "tiltx", "tilty", "temperature", "TideCorr", "duration", "rej", "dec", "terrain"]
+    header = ["Date_Time", "line", "Station", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "temperature", "TideCorr", "duration", "rej", "dec", "terrain"]
 
     df = pd.read_csv(filepath, skiprows=31, delimiter="\s+", header=None, parse_dates=[[14, 11]])
     # Make some modifications to the header

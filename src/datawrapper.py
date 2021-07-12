@@ -77,10 +77,18 @@ class DataWrapper():
     """
 
     # Only keep the accepted values
-    df = df[(df["Accepted"] == 1)]
+    try:
+      df = df[(df["Accepted"] == 1)]
+    except:
+      pass
+
     df = df[(np.abs(df["TiltX"]) < 20) & (np.abs(df["TiltY"]) < 20)]
     df = df[df["duration"] >= 60]
-    df = df[df["rej"] < 5]
+
+    try:
+      df = df[df["rej"] < 5]
+    except:
+      pass
 
     return df
 
@@ -324,6 +332,7 @@ class DataWrapper():
 
     # Combine polynomial and gravity design matrices: different depending on whether we introduce a tare
     if tare is None:
+      Gtare = [None]
       G = np.hstack((Gpoly.T, Gdg))
     else:
       # Tare matrix
@@ -357,4 +366,4 @@ class DataWrapper():
       y -= Gtare[0] * lsq[-1]
       dtare = lsq[-1]
 
-    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi, tare, dtare)
+    return InversionResult(self, degree, anchor, mbeta, x, y, s, mdg, stddg, residuals, changes, stations, chi, tare, dtare, Gtare[0])
