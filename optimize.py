@@ -7,36 +7,6 @@ import numpy as np
 import sys
 from scipy.optimize import minimize
 from pyproj import Proj
-from lib.model import getDEM,plotDEM
-
-def getUTMCoordinates():
-
-  # Load the DEM
-  DEM = getDEM(area="kilauea")
-
-  # Get parameters
-  longitude = np.array(DEM.variables["lon"][:])
-  latitude = np.array(DEM.variables["lat"][:])
-
-  # Get the DEM elevations
-  elevation = np.array(DEM.variables["elev"][:])
-  elevation[np.isnan(elevation)] = 0
-
-  # Interpolate the lat/lng grid to find station elevations
-  model = interp2d(longitude, latitude, elevation)
-
-  # Convert lat/lng to UTM
-  myProj = Proj("+proj=utm +zone=5n, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
-  xProj, yProj = myProj(metadata["Longitude"], metadata["Latitude"])
-
-  # Add the elevation
-  zProj = []
-  for (x, y) in zip(metadata["Longitude"], metadata["Latitude"]):
-    zProj.append(model(x, y)[0])
-  zProj = np.array(zProj)
-
-  return xProj, yProj, zProj
-
 
 def __gravity(M, dx, dy, dz):
 
@@ -48,99 +18,49 @@ def __gravity(M, dx, dy, dz):
   G = 6.67408E-11
 
   rs = dx ** 2 + dy ** 2 + dz ** 2
-
   return 1E8 * G * M * (dz / np.power(rs, 1.5))
 
 
-if __name__ == "__main__":
+def optimize(which):
 
-  which = "2009-Dec 2010-Jun"
-  #which = "2010-Jun 2011-Mar"
-  which = "2011-Mar 2012-Jun"
-  which = "2012-Jun 2012-Nov"
-  which = "2012-Nov 2015-Sept"
-  which = "2015-Sept 2017-Apr"
-
-  # The station metadata
-  metadata = pd.read_csv(
-    "metadata/stations.csv",
-    delimiter="\t"
-  )
-
-  xProj, yProj, zProj = getUTMCoordinates()
-  
   # Load the gravity differences
   measurements = pd.read_csv(
-    "results-578.csv",
+    "compiled.csv",
     delimiter="\t"
   )
 
-  # Set up the order of coordinates
-  xs = []
-  ys = []
-  zs = []
-  vals = []
-  
-  # Go over each benchmark: same order as projection
-  for (BM, x, y, z) in zip(metadata["BM"], xProj, yProj, zProj):
-  
-    # Skip the anchor
-    if BM == "P1":
-      P1x = x
-      P1y = y
-      P1z = z
-      continue
+  measurements = measurements[~np.isnan(measurements[which])]
+  measurements = measurements[~measurements["BM"].isin(["P1", "HOVL-G", "205YY", "HVO41"])]
 
-    # Benchmarks too close to the lava lake
-    if BM in ["68-15"]:
-      continue
-
-    # Benchmarks too close to the lava lake
-    if BM in ["HOVL-G", "205YY", "HVO41"]:
-      continue
-
-    # Get the measurement
-    g = measurements[measurements["Station"] == BM][which].iloc[0]
-
-    if np.isnan(g):
-      continue
-
-    xs.append(x)
-    ys.append(y)
-    zs.append(z)
-    vals.append(g)
-  
   # Convert to numpy arrays
-  xs = np.array(xs)
-  ys = np.array(ys)
   # Elevation is negative z
-  zs = -np.array(zs)
-  measuredGravity = np.array(vals)
-  
-  # Initial guess
-  x0 = np.array([1E8, 260000, 2147000, 3000])
+  xs = np.array(measurements["UTM (E)"])
+  ys = np.array(measurements["UTM (N)"])
+  zs = -np.array(measurements["ELEV"])
+  measuredGravity = np.array(measurements[which])
+
+  # The initial guess for the parameters (M, x, y, z) for source position
+  x0 = np.array([1E10, 260000, 2147000, 3000])
 
   def gravityObjective(x):
-  
+
     """
     def gravityObjective
     Objective function to minimize
     """
-  
+
     # Calculate coordinate differences
     dx = x[1] - xs
     dy = x[2] - ys
     dz = x[3] - zs
-  
     predictedGravity = __gravity(x[0], dx, dy, dz)
-  
+
     # Correct for the effect at P1
-    p1dx = x[1] - P1x
-    p1dy = x[2] - P1y
-    p1dz = x[3] - P1z
-  
+    p1dx = x[1] - 258376
+    p1dy = x[2] - 2150798
+    p1dz = x[3] - -1202.0
     predictedGravity -= __gravity(x[0], p1dx, p1dy, p1dz)
-  
+
     # Objective: minimize the residual squared sum
     return np.sum(np.square(measuredGravity - predictedGravity))
 
@@ -151,24 +71,37 @@ if __name__ == "__main__":
     method="Nelder-Mead",
     options={"maxiter": 10000}
   )
-  
-  predictedGravity = []
-  
-  for (x, y, z) in zip(xs, ys, zs):
-  
-    dx = solution.x[1] - x
-    dy = solution.x[2] - y
-    dz = solution.x[3] - z
-  
-    predictedGravity.append(__gravity(solution.x[0], dx, dy, dz))
-  
-  predictedGravity = np.array(predictedGravity)
-    
-  plotDEM(area="kilauea")
-  label = "{:.2e}kg".format(solution.x[0]) + " & depth = " + str(np.round(solution.x[3])) + "m"
-  plt.scatter(xs, ys, c=measuredGravity, cmap=cm.seismic, edgecolor="black", linewidth=1, norm=DivergingNorm(0))
-  plt.colorbar()
 
-  plt.scatter(solution.x[1], solution.x[2], label=label, edgecolor="black", marker="*", color="yellow", s=500, linewidth=1)
-  plt.legend()
-  plt.show()
+  return solution.x
+
+if __name__ == "__main__":
+
+  """
+  def __main__
+  Optimization
+  """
+
+  combinations = (
+    "2009-Dec 2010-Jun",
+    "2010-Jun 2011-Mar",
+    "2011-Mar 2012-Jun",
+    "2012-Jun 2012-Nov",
+    "2012-Nov 2015-Sept",
+    "2015-Sept 2017-Apr"
+  )
+
+  save = list()
+  for instrument in ("578", "579"):
+    for combination in combinations:
+      which = "DG %s (%s)" % (instrument, combination)
+      solution = optimize(which)
+      save.append([which] + list(solution))
+
+  df = pd.DataFrame(save)
+  df.columns = ["Campaign", "Mass", "UTM (E)", "UTM (N)", "ELEV"]
+
+  df.to_csv(
+    "sources.csv",
+    sep="\t",
+    index=False
+  )

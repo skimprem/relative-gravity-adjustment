@@ -85,6 +85,16 @@ class ResultWrapper():
 
     return self.data[which][instrument]
 
+
+  def getSourceSolution(self, instrument, one, two):
+
+    df = pd.read_csv("sources.csv", delimiter="\t")
+    row = df[df["Campaign"] == "DG %s (%s %s)" % (instrument, one, two)].iloc[0]
+    x, y = row["UTM (E)"], row["UTM (N)"]
+    label = "Source %.1Ekg, %im" % (row["Mass"], row["ELEV"])
+
+    return plt.scatter(x, y, edgecolor="black", linewidth=1, marker="*", color="white", s=200, zorder=100), label
+
   def compareMap(self, instrument, one, two, scale):
   
     """
@@ -100,6 +110,8 @@ class ResultWrapper():
   
     self.plotDEM(21)
   
+    l, label = self.getSourceSolution(instrument, one, two)
+
     filename = "%s %s %s" % (one, two, instrument)
     plt.title("Change in Gravity Difference with Anchor P1 \n Between %s and %s \n Instrument %s" % (one, two, instrument))
   
@@ -154,6 +166,7 @@ class ResultWrapper():
     bar.mappable.set_clim(-scale, scale)
     bar.outline.set_edgecolor("black")
     bar.outline.set_linewidth(1)
+    bar.set_label("Change in Gravity Difference (µGal)")
   
     # Neat layout of the legend! This is unimportant and just visually pleasing
     c = plt.scatter(np.nan, np.nan, color=cmap(0.2), edgecolor="black", linewidth=1)
@@ -161,7 +174,7 @@ class ResultWrapper():
     e = plt.scatter(np.nan, np.nan, color=cmap(0.5), edgecolor="black", linewidth=1)
     f = plt.scatter(np.nan, np.nan, color=cmap(0.6), edgecolor="black", linewidth=1)
     g = plt.scatter(np.nan, np.nan, color=cmap(0.8), edgecolor="black", linewidth=1)
-    plt.legend([a, b, (c, d, e, f, g)], ("Unavailable", "Anchor (P1)", "Campaign"), scatterpoints=1, numpoints=2, handler_map={tuple: HandlerTuple(ndivide=None)}, frameon=True, prop={"size": 8})
+    plt.legend([a, b, l, (c, d, e, f, g)], ("Unavailable", "Anchor (P1)", label, "Campaign"), scatterpoints=1, numpoints=2, handler_map={tuple: HandlerTuple(ndivide=None)}, frameon=True, prop={"size": 8})
   
     # Figure setup
     plt.tight_layout()
@@ -193,7 +206,7 @@ class ResultWrapper():
 
   def save(self, filepath):
 
-    header = ["BM, UTM (E), UTM(N), ELEV"]
+    header = ["BM", "UTM (E)", "UTM (N)", "ELEV"]
 
     combinations = [
       ("2009-Dec", "2010-Jun"),
@@ -209,6 +222,7 @@ class ResultWrapper():
     data = [locations["BM"], xProj, yProj, locations["Elevation"]]
 
     for combination in combinations:
+
       for instrument in ["578", "579"]:
 
         dataOne = self.get(combination[0], instrument)
@@ -225,7 +239,9 @@ class ResultWrapper():
             continue
 
           dg, std = self.difference(dataOne, dataTwo, station)
-          columnGravity.append(dg)
+          dg += self.getHeight(combination[0], combination[1], station)
+
+          columnGravity.append(np.round(dg))
           columnStd.append(np.round(std))
 
         header.append("DG %s (%s %s)" % (instrument, *combination))
@@ -236,10 +252,10 @@ class ResultWrapper():
 
     np.savetxt(filepath,
                np.array(data).T,
-               delimiter=",",
+               delimiter="\t",
                comments="",
                fmt="%s",
-               header=",".join(header))
+               header="\t".join(header))
 
   def getHeight(self, one, two, station):
   
