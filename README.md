@@ -1,3 +1,7 @@
+# Code for Review of Relative Hawaiian Gravity Campaigns (2009 - 2017)
+
+This repository contains the code for review of relative gravity campaigns between 2009 and 2017. There is code for estimation of vertical deformation (`insar/`) and relative gravity adjustment (`hawaii.py`). The raw InSAR & gravity data files are not included in this repository.
+
 # Code for Relative Gravity Adjustment
 
 Supports loading of CG5, CG6 data and using WLS Inversion to complete gravity adjustment. Similar to the method described by Hwang et al., (2002), but applied to double closed-loop circuits so the system is easily overdetermined.
@@ -5,7 +9,7 @@ Supports loading of CG5, CG6 data and using WLS Inversion to complete gravity ad
 * Useful to find solutions for the free-air gradient
 * Useful to discover gravity differences between benchmarks in a gravity network
 
-Open `invert.py` to view examples. The provided example data is from a free-air gradient measurement using both CG5 and CG6 instruments. This program can do tidal (ETERNA 3.4 or Longman, 1959) and ocean loading corrections but may require some additional dependencies (e.g., [Pygtide](https://github.com/hydrogeoscience/pygtide)) to be installed. The `ocl/` directory contains information on ocean loading corrections and relies on HARDISP inside the `hardisp/` directory for the parameter evaluation.
+Open `example.py` to view examples. The provided example data is from a free-air gradient measurement using both CG5 and CG6 instruments. This program can do tidal (ETERNA 3.4 or Longman, 1959) and ocean loading corrections but may require some additional dependencies (e.g., [Pygtide](https://github.com/hydrogeoscience/pygtide)) to be installed. The `ocl/` directory contains information on ocean loading corrections and relies on HARDISP inside the `hardisp/` directory for the parameter evaluation.
 
 ## Class DataLoader
 
@@ -37,5 +41,3 @@ Wrapper for the inverted results. Two methods exist for plotting for showing the
     result.plotResiduals(filename)
     result.differences
     result.save(filename)
-    result.relativeTo(anchor, dg, dstd)
-

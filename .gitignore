@@ -5,8 +5,4 @@ hardisp/HARDISP
 .DS_Store
 *.swp
 *.swo
-data
-results
-figures
-compiled.csv
-insar/netcdf
+hawaii
