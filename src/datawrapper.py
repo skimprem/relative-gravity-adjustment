@@ -150,12 +150,12 @@ class DataWrapper():
     matrix_changes = np.broadcast_to(changes, (stations.size, changes.size))
 
     # The gravity design matrix (binary)
-    return np.array(matrix_stations.T == matrix_changes, dtype=np.int)
+    return np.array(matrix_stations.T == matrix_changes, dtype=int)
 
 
   def setupTareDesign(self, stations, tare):
 
-    Gtare = np.zeros(stations.size, dtype=np.int)
+    Gtare = np.zeros(stations.size, dtype=int)
 
     # Set the respective tare indices to one
     if tare != 0:
