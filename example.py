@@ -7,10 +7,11 @@ if __name__ == "__main__":
   More complex analysis requires pygtide / ocl parameters
   """
 
-  data = DataLoader.load("CG5", "example/CG5.dat")
-  result = data.invert(2)
-  result.plot("CG5.pdf")
+  # data = DataLoader.load("CG5", "example/CG5.dat")
+  # result = data.invert(2)
+  # result.plot("CG5.pdf")
 
-  data = DataLoader.load("CG6", "example/CG6.dat")
-  result = data.invert(2, anchor="40")
-  result.plot("CG6.pdf")
+  data = DataLoader.load("CG6", "example/LINE N 23 FROM CG-6_0368_9347-VG.dat .txt")
+  result = data.invert(degree=1)
+  result.save("result.txt")
+  result.plot('result.pdf')
