@@ -11,7 +11,9 @@ if __name__ == "__main__":
   # result = data.invert(2)
   # result.plot("CG5.pdf")
 
-  data = DataLoader.load("CG6", "example/LINE N 23 FROM CG-6_0368_9347-VG.dat .txt")
+  # data = DataLoader.load("CG6", "example/LINE N 23 FROM CG-6_0368_9347-VG.dat .txt")
+  data = DataLoader.load("CG6", "/home/roman/gitrepo/simple_grav_proc/example/vertical_gradient/CG-6_0461_VG_1253.dat")
+  data.setLocations("example/locations/stations.csv")
   result = data.invert(degree=1)
   result.save("result.txt")
   result.plot('result.pdf')
