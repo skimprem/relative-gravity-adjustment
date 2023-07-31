@@ -3,8 +3,15 @@ README.md
 example.py
 rga.py
 setup.py
+dist/rga-0.0.1-py3.11.egg
+example/CG-6_0368_9347-VG.dat
+example/CG-6_0458_1089_VG-20231404.dat
 example/CG5.dat
 example/CG6.dat
+example/line1.dat
+example/line2.dat
+example/line3.dat
+example/locations/stations.csv
 hardisp/ADMINT.F
 hardisp/ETUTC.F
 hardisp/EVAL.F
