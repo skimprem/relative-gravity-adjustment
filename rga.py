@@ -9,8 +9,8 @@ from tkinter import scrolledtext as st
 from src.dataloader import DataLoader
 import pandas as pd
 
-# GUI = False
-GUI = True 
+GUI = False
+# GUI = True 
 
 if sys.platform.startswith('win32'):
     GUI = True
