@@ -24,6 +24,7 @@ if GUI:
     degree = sd.askinteger(
         title='Degree input',
         prompt='Input degree',
+        initialvalue=1,
         minvalue=1,
         maxvalue=6
     )
@@ -92,23 +93,55 @@ report = report_table.to_markdown(
 
 basename = path.splitext(data_file)[0].split('/')[-1]
 
-with open('report_'+basename+'.txt', 'w', encoding='utf-8') as report_file:
-    report_file.write(report)
-    report_file.close()
-
 if verbose:
     if GUI:
-        root = tk.Tk()
-        S = tk.Scrollbar(root)
-        T = tk.Text(root, height=4, width=50)
-        S.pack(side=tk.RIGHT, fill=tk.Y)
-        T.pack(side=tk.LEFT, fill=tk.Y)
-        S.config(command=T.yview)
-        T.config(yscrollcommand=S.set)
-        T.insert(tk.END, report)
-        tk.mainloop()
+        # Creating tkinter window
+        win = tk.Tk()
+        win.title('Report')
+          
+        # Creating scrolled text area
+        # widget with Read only by
+        # disabling the state
+        text_area = st.ScrolledText(win,
+                                    width = 50, 
+                                    height = 10
+        )
+          
+        text_area.grid(column = 0, pady = 10, padx = 10)
+          
+        # Inserting Text which is read only
+        text_area.insert(tk.END, report)
+          
+        # Making the text read only
+        text_area.configure(state ='disabled')
+        win.mainloop()
     else:
         print(report)
 
+default_output_file_report = 'report_'+basename+'.txt'
+
+if GUI:
+    output_file_report = fd.asksaveasfilename(
+        defaultextension=".txt",
+        filetypes=[('ACSII text file', '*.txt'), ('All files', '*')],
+        initialfile=default_output_file_report,
+        title="Save Report")
+else:
+    output_file_report = default_output_file_report
+
+with open(output_file_report, 'w', encoding='utf-8') as report_file:
+    report_file.write(report)
+    report_file.close()
+
 if plot:
-    result.plot(basename+'.pdf')
+    if GUI:
+        output_plot = fd.asksaveasfilename(
+            defaultextension='.pdf',
+            filetypes=[('pdf', '*.pdf'), ('All files', '*')],
+            initialfile=basename+'.pdf',
+            title='Save Plot'
+        )
+    else:
+        output_plot = basename+'.pdf'
+
+result.plot(output_plot)
