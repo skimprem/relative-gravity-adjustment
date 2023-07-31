@@ -143,5 +143,4 @@ if plot:
         )
     else:
         output_plot = basename+'.pdf'
-
 result.plot(output_plot)
