@@ -54,6 +54,7 @@ else:
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('--anchor', metavar='anchor', help='Anchor')
     parser.add_argument('--plot', action='store_true', help='Get plot')
+    parser.add_argument('--meter_type', metavar='meter_type', help='Meter type')
 
     args=parser.parse_args()
     data_file = args.data_file[0].name
@@ -71,7 +72,7 @@ else:
     else:
         plot = None
 
-data = DataLoader.load('CG6', data_file)
+data = DataLoader.load(args.meter_type, data_file)
 if anchor:
     result = data.invert(degree=degree, anchor=anchor)
 else:
