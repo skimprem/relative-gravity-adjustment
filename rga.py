@@ -15,6 +15,7 @@ parser.add_argument('data_file', type=argparse.FileType('r'), nargs='+')
 parser.add_argument('--degree', metavar='degree', help='Degree')
 parser.add_argument('--verbose', action='store_true', help='Verbose mode')
 parser.add_argument('--anchor', metavar='anchor', help='Anchor')
+parser.add_argument('--meter_type', metavar='meter_type', help='Meter type')
 parser.add_argument('--plot', action='store_true', help='Get plot')
 
 args=parser.parse_args()
@@ -22,7 +23,7 @@ args=parser.parse_args()
 data_file = args.data_file[0].name
 degree = int(args.degree)
 
-data = DataLoader.load('CG6', data_file)
+data = DataLoader.load(args.meter_type, data_file)
 if args.anchor:
     result = data.invert(degree=degree, anchor=args.anchor)
 else:

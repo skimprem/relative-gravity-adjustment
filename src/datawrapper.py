@@ -110,7 +110,7 @@ class DataWrapper():
     y -= y[0]
 
     # Undo the instrument tide correction
-    y -= 1E3 * df["TideCorr"]
+    # y -= 1E3 * df["TideCorr"]
 
     return benchmarks, x, y, s
 
