@@ -75,7 +75,6 @@ class DataWrapper():
     def DataWrapper.filter
     Applies a filter to the data to remove poor data
     """
-
     # Only keep the accepted values
     try:
       df = df[(df["Accepted"] == 1)]
@@ -344,6 +343,8 @@ class DataWrapper():
 
     # Invert to model parameters & uncertainties
     lsq, std, residuals, chi = self.__invert(G, W, y)
+
+    print(lsq)
 
     # These are the drift parameters
     mbeta = lsq[:degree + 1]

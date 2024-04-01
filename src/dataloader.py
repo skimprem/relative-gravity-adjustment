@@ -23,6 +23,8 @@ class DataLoader():
     """
 
     if ver == "CG5":
+      asdf = self.readCG5Dat(filepath)
+      print(asdf.df)
       return self.readCG5Dat(filepath)
     elif ver == "CG6":
       return self.readCG6Dat(filepath)
@@ -77,11 +79,11 @@ class DataLoader():
     # Change header to match CG6
     header = ["Date_Time", "line", "Station", "Altitude", "CorrGrav", "StdErr", "TiltX", "TiltY", "temperature", "TideCorr", "duration", "rej", "dec", "terrain"]
 
-    df = pd.read_csv(filepath, skiprows=31, delimiter="\s+", header=None, parse_dates=[[14, 11]])
+    df = pd.read_csv(filepath, skiprows=34, delimiter="\s+", header=None, parse_dates=[[14, 11]])
     # Make some modifications to the header
     df.columns = header
 
     # Calculate the stderr (CG5 has stdev).. It samples at 6Hz but CG6 calculates the standard error like this
     df["StdErr"] = df["StdErr"] / np.sqrt(df["duration"] - df["rej"])
-
+    
     return DataWrapper("CG5", df, filepath)
