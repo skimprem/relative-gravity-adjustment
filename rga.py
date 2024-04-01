@@ -9,21 +9,11 @@ from tkinter import scrolledtext as st
 from src.dataloader import DataLoader
 import pandas as pd
 
-GUI = False
-# GUI = True 
+# GUI = False
+GUI = True 
 
-<<<<<<< HEAD
-parser.add_argument('data_file', type=argparse.FileType('r'), nargs='+')
-# parser.add_argument('--meter', metavar='meter_type', help='Type of meter')
-parser.add_argument('--degree', metavar='degree', help='Degree')
-parser.add_argument('--verbose', action='store_true', help='Verbose mode')
-parser.add_argument('--anchor', metavar='anchor', help='Anchor')
-parser.add_argument('--meter_type', metavar='meter_type', help='Meter type')
-parser.add_argument('--plot', action='store_true', help='Get plot')
-=======
 if sys.platform.startswith('win32'):
     GUI = True
->>>>>>> 535f86ecfde92c234cc84d0879d6cbd7c97187e7
 
 if GUI:
     data_file = fd.askopenfilename(
@@ -41,6 +31,11 @@ if GUI:
     anchor = sd.askstring(
         title='Anchor input',
         prompt='Input anchor'
+    )
+    meter_type = sd.askstring(
+        title='Meter type',
+        prompt='Input type of meter (CG5 or CG6)',
+        initialvalue='CG6'
     )
     plot = mb.askyesno(
         title='Plotting',
@@ -66,11 +61,6 @@ else:
     parser.add_argument('--plot', action='store_true', help='Get plot')
     parser.add_argument('--meter_type', metavar='meter_type', help='Meter type')
 
-<<<<<<< HEAD
-data = DataLoader.load(args.meter_type, data_file)
-if args.anchor:
-    result = data.invert(degree=degree, anchor=args.anchor)
-=======
     args=parser.parse_args()
     data_file = args.data_file[0].name
     degree = int(args.degree)
@@ -86,11 +76,14 @@ if args.anchor:
         plot = args.plot
     else:
         plot = None
+    if args.meter_type:
+        meter_type = args.meter_type
+    else:
+        meter_type = 'CG6'
 
-data = DataLoader.load(args.meter_type, data_file)
+data = DataLoader.load(meter_type, data_file)
 if anchor:
     result = data.invert(degree=degree, anchor=anchor)
->>>>>>> 535f86ecfde92c234cc84d0879d6cbd7c97187e7
 else:
     result = data.invert(degree=degree)
 
@@ -160,4 +153,4 @@ if plot:
         )
     else:
         output_plot = basename+'.pdf'
-result.plot(output_plot)
+    result.plot(output_plot)
